@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071522">
+<meta name="description" content="Atlas Humano 3D: exploración del cuerpo completo por regiones y sistemas anatómicos.">
+<title>Cuerpo completo · Atlas Humano 3D</title>
+<style>
+:root{color-scheme:dark;--bg:#07131f;--panel:#102437;--panel2:#0c1c2c;--line:#29475d;--ink:#eaf6ff;--muted:#a4bed1;--teal:#83e1d4;--blue:#80c9ef;--gold:#efc789}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(ellipse at 40% -10%,#1b4c6170,transparent 50%),#07131f;min-height:100vh}
+button,a{font:inherit}button{cursor:pointer}a{color:#a7e5ff}button:focus-visible,a:focus-visible{outline:3px solid #8fe7e0;outline-offset:3px}
+.wrap{max-width:1530px;margin:auto;padding:18px 24px 35px}
+.nav{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap;background:#0d2638;border:1px solid #36596b;border-radius:18px;padding:13px 17px}
+.brand{font-weight:850;letter-spacing:.2px;color:#dff8ff}.brand span{color:var(--teal)}
+.navlinks{display:flex;flex-wrap:wrap;gap:8px}.navlinks a{text-decoration:none;color:#d2e8f3;border:1px solid #39566a;background:#173348;padding:9px 12px;border-radius:11px;font-weight:700;font-size:12px}.navlinks a:hover{background:#245169}.navlinks a.active{color:#082a35;background:#8ce5d8;border-color:#8ce5d8}
+.hero{display:flex;align-items:end;justify-content:space-between;gap:22px;margin:30px 0 21px}.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#80dfd2;font-weight:850}.hero h1{font-size:clamp(33px,4.6vw,62px);letter-spacing:-2px;line-height:1.06;margin:9px 0 12px}.hero h1 em{font-style:normal;color:#91e7db}.hero p{color:#a7bdcc;max-width:790px;margin:0;font-size:15px}.version{flex-shrink:0;min-width:170px;text-align:center;border:1px solid #3b6c7a;background:#123242;padding:14px 19px;border-radius:17px}.version strong{font-size:30px;color:#93e8dc;display:block}.version small{font-size:11px;color:#adc6d3}
+.layerbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:13px 15px;background:#0d2436;border:1px solid #2d4a5f;border-radius:16px;margin-bottom:17px}.layerbar .title{font-size:12px;color:#b4c9d8;font-weight:750;margin-right:5px}.layer{background:#18364a;border:1px solid #38586c;color:#c2d9e7;border-radius:11px;padding:10px 14px;font-size:13px;font-weight:760}.layer.active{background:#27646a;color:#fff;border-color:#8de2d5;box-shadow:inset 0 0 0 1px #8de2d530}.layer:hover:not(.active){background:#244e61}
+.layout{display:grid;grid-template-columns:minmax(270px,.7fr) minmax(0,1.3fr) minmax(270px,.7fr);gap:15px;align-items:start}
+.panel{border:1px solid #2b4a60;border-radius:21px;background:linear-gradient(155deg,#11283c,#0b1b2b);box-shadow:0 20px 50px #0004;overflow:hidden}
+.panelhead{padding:17px 18px;border-bottom:1px solid #2a4558}.panelhead h2{margin:0;font-size:17px;letter-spacing:-.3px}.panelhead p{margin:5px 0 0;font-size:12px;color:#9fb9cb}
+.bodypane{padding:8px 8px 14px}.bodymap{display:block;width:100%;max-width:360px;margin:0 auto;max-height:580px}
+.mapframe{background:radial-gradient(ellipse at center,#1c3b50,#0b1c2b 72%);border:1px solid #27475c;border-radius:16px;margin:6px 8px 12px;position:relative;overflow:hidden}
+.mapframe:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(transparent 24px,#9bd4e508 25px),linear-gradient(90deg,transparent 24px,#9bd4e508 25px);background-size:25px 25px}
+.bodymap .outline{fill:url(#skinGrad);stroke:#b8e2f3;stroke-width:1.8;stroke-linejoin:round}
+.bodymap .hotspot{cursor:pointer;outline:none}.bodymap .hotspot .hit{fill:#ffffff00;stroke:#ffffff00;stroke-width:2;transition:stroke .15s,fill .15s}
+.bodymap .hotspot:hover .hit,.bodymap .hotspot:focus .hit{fill:#82e1d319;stroke:#82e1d3a6;stroke-dasharray:5 5}
+.bodymap .hotspot.selected .hit{fill:#8de3d524;stroke:#a0f6e4;stroke-width:2.4}
+.bodymap .hotspot:focus-visible{outline:none}
+.bodymap .anatomy{pointer-events:none}.bodymap .anatomy[hidden]{display:none}
+.bodymap .skeletal{fill:none;stroke:#e8e4d4;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.bodymap .muscle{fill:#c85f65;stroke:#e78e8c;stroke-width:1.3}
+.bodymap .organ{stroke:#d4b9af;stroke-width:1.2}
+.mapcaption{font-size:11px;text-align:center;color:#9db8cb;padding:0 12px 8px}
+.regions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 15px 15px}.regionbtn{background:#142d41;border:1px solid #345267;border-radius:10px;padding:9px 7px;color:#d3e5f0;font-size:12px;font-weight:700}.regionbtn.active{background:#1e5560;border-color:#85dfd2;color:#fff}
+.viewerhead{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 17px}.viewerhead h2{margin:0;font-size:19px}.viewerhead p{font-size:12px;color:#9eb8c8;margin:3px 0 0}.viewerhead a{font-size:11px;white-space:nowrap;text-decoration:none;border:1px solid #41637a;padding:8px 10px;border-radius:9px}
+.viewer{position:relative;height:clamp(470px,56vw,665px);background:radial-gradient(circle,#2a4354,#091724 65%)}.viewer iframe{display:block;width:100%;height:100%;border:0}.loadcover{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:30px;text-align:center;background:linear-gradient(#081826ee,#102b3df0)}.loadcover .glyph{font-size:60px}.loadcover h3{margin:0;font-size:19px}.loadcover p{font-size:13px;color:#b0c8d8;max-width:350px;margin:0}.primary{background:#8ce2d8;border:1px solid #c4fff6;color:#062b34;padding:12px 17px;border-radius:12px;font-weight:850}.primary:hover{background:#b0f4e7}
+.viewfoot{padding:13px 16px;border-top:1px solid #294459;display:flex;gap:9px;flex-wrap:wrap;justify-content:space-between;align-items:center}.viewfoot span{font-size:11px;color:#a2bbcd}.tag{background:#163548;border:1px solid #36596b;color:#d4eaf3;border-radius:9px;padding:6px 8px;font-size:11px}
+.info{padding:19px}.info .small{color:#8ddfd3;font-size:10px;letter-spacing:1.5px;font-weight:850;text-transform:uppercase}.info h2{font-size:25px;letter-spacing:-.7px;line-height:1.18;margin:7px 0 12px}.info p{font-size:13px;color:#b9cedc;line-height:1.7}.info h3{font-size:13px;margin:22px 0 9px}.structures{display:grid;gap:8px}.structure{background:#102a3d;border:1px solid #365369;color:#d7ebf5;padding:10px 12px;text-align:left;border-radius:11px;font-size:12px;font-weight:720}.structure.active{background:#21546a;border-color:#79d7d9}.fact{border:1px solid #3a6774;background:#163948;border-radius:14px;padding:14px;margin-top:13px}.fact strong{color:#e9fbff;font-size:14px}.fact p{margin:5px 0 0}
+.secondary{display:block;width:100%;border:1px solid #4b7c89;background:#194a58;color:#edfbff;border-radius:11px;padding:11px;margin-top:15px;font-weight:800;font-size:12px}.secondary:hover{background:#266275}
+.walk{margin-top:17px;border-top:1px solid #2d4c5f;padding-top:15px}.walkhead{display:flex;align-items:center;justify-content:space-between}.walkhead strong{font-size:13px}.walkhead span{font-size:11px;color:#8edccf}.walktext{font-size:12px;color:#b6cddc;min-height:58px;line-height:1.6}.walkcontrols{display:flex;gap:7px}.walkcontrols button{flex:1;border:1px solid #365c72;background:#1a3b52;color:#e2f3fc;border-radius:9px;padding:9px;font-size:12px}
+.notice{margin-top:17px;border:1px solid #355a69;background:#0e2838;border-radius:13px;padding:12px 14px;color:#a9c8d6;font-size:12px;line-height:1.6}
+.sources{margin-top:20px;color:#90b0c4;font-size:11px;line-height:1.7}.sources a{color:#a6d8f4}.footer{font-size:12px;color:#90acbf;padding:23px 0 8px}
+@media(max-width:1200px){.layout{grid-template-columns:minmax(245px,.65fr) minmax(0,1.35fr)}.infoPanel{grid-column:1/-1}.info{display:grid;grid-template-columns:1fr 1fr;gap:0 25px}.info .wide{grid-column:1/-1}}
+@media(max-width:740px){.wrap{padding:11px}.nav{padding:12px}.navlinks a{padding:8px;font-size:11px}.hero{margin:24px 3px 18px}.hero h1{font-size:37px}.version{display:none}.layout{grid-template-columns:1fr}.infoPanel{grid-column:auto}.bodymap{max-height:450px}.mapframe{max-width:440px;margin:8px auto 12px}.info{display:block}.viewer{height:420px}.layerbar{padding:11px;gap:6px}.layer{font-size:12px;padding:9px 11px}.regions{grid-template-columns:repeat(3,1fr)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="nav" aria-label="Navegación del atlas"><div class="brand">✧ ATLAS HUMANO <span>3D</span></div><div class="navlinks"><a href="index.html#cerebro">🧠 Cerebro</a><a href="index.html#cabeza">👤 Cabeza</a><a href="index.html#corazon">🫀 Corazón</a><a class="active" href="cuerpo.html" aria-current="page">🧍 Cuerpo completo</a></div></nav>
+<section class="hero"><div><div class="eyebrow">Atlas interactivo · Versión 04</div><h1>Todo el cuerpo.<br><em>Una región a la vez.</em></h1><p>Elegí una zona del cuerpo y explorá cuatro sistemas anatómicos. Cambiá entre vistas exteriores, musculares, óseas y de órganos; después acercate a cada región con modelos 3D y explicaciones en español.</p></div><div class="version"><strong>04</strong><small>SISTEMAS PARA EXPLORAR</small></div></section>
+<div class="layerbar" role="group" aria-label="Capas anatómicas"><span class="title">SISTEMA VISIBLE</span><button class="layer active" data-layer="exterior" aria-pressed="true">◉ Exterior</button><button class="layer" data-layer="musculos" aria-pressed="false">◈ Músculos</button><button class="layer" data-layer="huesos" aria-pressed="false">◇ Huesos</button><button class="layer" data-layer="organos" aria-pressed="false">♥ Órganos</button></div>
+<main class="layout">
+<section class="panel" aria-label="Mapa corporal"><div class="panelhead"><h2>Mapa corporal</h2><p>Tocá una zona para explorarla</p></div><div class="bodypane"><div class="mapframe">
+<svg class="bodymap" viewBox="0 0 420 800" role="img" aria-label="Esquema frontal del cuerpo humano con regiones seleccionables">
+<defs><linearGradient id="skinGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#507d92"/><stop offset=".55" stop-color="#25475e"/><stop offset="1" stop-color="#17384c"/></linearGradient><linearGradient id="muscleGrad" x1="0" x2="1"><stop stop-color="#7c3c4c"/><stop offset=".5" stop-color="#c26a6b"/><stop offset="1" stop-color="#6d3545"/></linearGradient></defs>
+<g opacity=".94">
+<ellipse class="outline" cx="210" cy="88" rx="47" ry="59"/><path class="outline" d="M191 136 L229 136 233 181 187 181Z"/>
+<path class="outline" d="M173 173 Q210 163 247 173 L275 213 266 324 250 402 170 402 154 324 145 213Z"/>
+<path class="outline" d="M151 187 Q129 182 119 207 L93 315 75 421 68 470 87 478 109 430 136 330 161 232Z"/>
+<path class="outline" d="M269 187 Q291 182 301 207 L327 315 345 421 352 470 333 478 311 430 284 330 259 232Z"/>
+<path class="outline" d="M170 393 Q210 410 250 393 L268 452 234 495 186 495 152 452Z"/>
+<path class="outline" d="M172 475 L207 490 202 636 193 736 176 759 154 751 160 724 159 617Z"/>
+<path class="outline" d="M248 475 L213 490 218 636 227 736 244 759 266 751 260 724 261 617Z"/>
+</g>
+<g class="anatomy" data-anatomy="musculos" hidden>
+<path fill="url(#muscleGrad)" stroke="#d27e7d" stroke-width="2" d="M170 181 Q210 172 250 181 L269 227 253 378 166 378 151 227Z"/>
+<path class="muscle" d="M205 201 Q176 190 161 211 Q166 250 205 254Z"/><path class="muscle" d="M215 201 Q244 190 259 211 Q254 250 215 254Z"/>
+<path class="muscle" d="M174 259 L205 265 201 288 173 281Z M216 265 L246 259 248 281 219 288Z M173 290 L201 295 201 319 171 315Z M219 295 L248 290 250 315 219 319Z M172 323 L201 326 200 351 171 345Z M220 326 L250 323 249 345 220 351Z"/>
+<path class="muscle" d="M133 203 Q119 223 111 264 L131 279 155 226Z M287 203 Q301 223 309 264 L289 279 265 226Z M106 280 L91 346 109 352 129 286Z M314 280 L329 346 311 352 291 286Z"/>
+<path class="muscle" d="M177 492 L204 502 192 616 168 603Z M243 492 L216 502 228 616 252 603Z M169 620 L194 634 187 728 165 729Z M251 620 L226 634 233 728 255 729Z"/>
+<path d="M209 203 V365 M174 290 H247 M173 325 H249" stroke="#edaaaa" stroke-width="2" fill="none" opacity=".65"/>
+</g>
+<g class="anatomy skeletal" data-anatomy="huesos" hidden>
+<path d="M210 164 V450" stroke-width="9"/><path d="M192 179 Q210 189 228 179" stroke-width="8"/>
+<path d="M210 206 Q160 193 157 234 M210 223 Q163 210 158 248 M210 241 Q163 231 159 265 M210 260 Q164 249 162 284 M210 278 Q170 273 172 300 M210 206 Q260 193 263 234 M210 223 Q257 210 262 248 M210 241 Q257 231 261 265 M210 260 Q256 249 258 284 M210 278 Q250 273 248 300" stroke-width="5"/>
+<path d="M169 393 Q210 416 251 393 L261 444 210 467 159 444Z" stroke-width="8"/>
+<path d="M144 203 L120 327 91 434 M276 203 L300 327 329 434" stroke-width="10"/>
+<path d="M181 493 L178 613 178 716 M239 493 L242 613 242 716" stroke-width="14"/>
+<path d="M178 614 L175 731 M242 614 L245 731" stroke-width="8"/>
+<path d="M178 717 L170 752 190 752 M242 717 L230 752 250 752" stroke-width="6"/>
+<ellipse cx="210" cy="88" rx="41" ry="53" stroke-width="6"/><path d="M176 105 Q210 137 244 105 M188 121 L233 121 M190 74 H230" stroke-width="4"/>
+</g>
+<g class="anatomy" data-anatomy="organos" hidden>
+<path class="organ" fill="#d39ca5" d="M180 66 Q166 44 191 42 Q204 29 213 44 Q233 32 245 49 Q255 75 233 89 L185 91 Q171 81 180 66Z"/>
+<path class="organ" fill="#c77f8a" d="M197 218 Q163 204 166 250 Q165 284 193 290 L204 258Z M223 218 Q257 204 254 250 Q255 284 227 290 L216 258Z"/>
+<path class="organ" fill="#b8425c" d="M210 252 Q198 232 192 248 Q179 266 210 287 Q238 267 228 250 Q220 240 210 252Z"/>
+<path class="organ" fill="#ab6d52" d="M174 301 Q207 286 239 308 Q242 324 218 331 L173 328Z"/>
+<path class="organ" fill="#c9a28c" d="M228 309 Q257 304 248 334 Q239 352 219 340 Q215 327 228 309Z"/>
+<path class="organ" fill="#a97182" d="M186 347 Q211 337 235 349 L240 372 Q210 387 182 371Z"/>
+<path d="M190 348 Q214 354 193 365 M217 350 Q194 363 220 372 M231 353 Q207 362 231 371" stroke="#e0b6b0" stroke-width="4" fill="none"/>
+</g>
+<g class="hotspot selected" data-region="cabeza" tabindex="0" role="button" aria-label="Seleccionar cabeza"><ellipse class="hit" cx="210" cy="91" rx="53" ry="67"/></g>
+<g class="hotspot" data-region="torax" tabindex="0" role="button" aria-label="Seleccionar tórax"><path class="hit" d="M162 183 L258 183 267 299 154 299Z"/></g>
+<g class="hotspot" data-region="abdomen" tabindex="0" role="button" aria-label="Seleccionar abdomen"><path class="hit" d="M159 301 L261 301 257 396 163 396Z"/></g>
+<g class="hotspot" data-region="pelvis" tabindex="0" role="button" aria-label="Seleccionar pelvis"><path class="hit" d="M158 395 L262 395 273 466 236 504 184 504 147 466Z"/></g>
+<g class="hotspot" data-region="brazos" tabindex="0" role="button" aria-label="Seleccionar brazos"><path class="hit" d="M146 179 L169 193 113 489 56 483 113 202Z M274 179 L251 193 307 489 364 483 307 202Z"/></g>
+<g class="hotspot" data-region="piernas" tabindex="0" role="button" aria-label="Seleccionar piernas"><path class="hit" d="M167 475 L207 489 197 764 150 766Z M253 475 L213 489 223 764 270 766Z"/></g>
+<g font-family="system-ui,sans-serif" font-size="11" fill="#c5e9ef" opacity=".7" pointer-events="none"><text x="18" y="35">ANTERIOR</text><text x="18" y="53">ESQUEMA</text><text x="18" y="71">EDUCATIVO</text><path d="M35 96 V152 M30 102 L35 96 40 102" stroke="#b4e2e9" fill="none"/></g>
+</svg></div><div class="mapcaption">Vista frontal esquemática · Las zonas resaltadas se pueden seleccionar</div><div class="regions" id="regionButtons" aria-label="Regiones corporales"></div></div></section>
+<section class="panel" aria-label="Visor anatómico 3D"><div class="viewerhead"><div><h2 id="modelName">Cabeza · Vista externa</h2><p id="modelDesc">Modelo 3D de la región seleccionada</p></div><a id="originalLink" href="https://sketchfab.com/" target="_blank" rel="noopener noreferrer">↗ Fuente</a></div><div class="viewer"><iframe id="frame" title="Visor 3D anatómico" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="loadcover" id="loadcover"><div class="glyph" id="modelGlyph">👤</div><h3 id="loadTitle">Cabeza · Vista externa</h3><p>Modelo 3D real alojado en Sketchfab. Se necesita Internet para cargarlo.</p><button class="primary" id="loadButton" type="button">Cargar modelo 3D</button></div></div><div class="viewfoot"><span>Arrastrá para girar · Rueda o dos dedos para acercar</span><span class="tag">MODELOS EXTERNOS · 3D</span></div></section>
+<aside class="panel infoPanel" aria-label="Información anatómica"><div class="info"><div><div class="small">REGIÓN SELECCIONADA</div><h2 id="regionTitle">Cabeza y cuello</h2><p id="regionDescription"></p><h3>ESTRUCTURAS PARA DESCUBRIR</h3><div class="structures" id="structureButtons"></div><div class="fact" aria-live="polite"><strong id="factName"></strong><p id="factText"></p></div><button class="secondary" id="wholeButton" type="button">↺ Ver cuerpo completo en 3D</button></div><div class="wide"><div class="walk"><div class="walkhead"><strong>Recorrido guiado</strong><span id="walkCount">1 / 5</span></div><p class="walktext" id="walkText"></p><div class="walkcontrols"><button id="walkPrev" type="button">← Anterior</button><button id="walkNext" type="button">Siguiente →</button></div></div><div class="notice"><strong>Cómo funcionan las capas:</strong> el esquema corporal cambia entre exterior, músculos, huesos y órganos. En el visor 3D se muestran modelos anatómicos distintos según la elección. Todavía no se ocultan piezas de un único modelo 3D integrado.</div></div></div></aside>
+</main>
+<div class="sources">Modelos 3D de autores externos, con sus atribuciones y condiciones de uso en las páginas originales: <a href="https://sketchfab.com/3d-models/lean-body-slim-fit-male-anatomy-character-e6b7699222e149619c71fbe227fc2e1d" target="_blank" rel="noopener noreferrer">BraineyBites (exterior)</a> · <a href="https://sketchfab.com/3d-models/ecorche-anatomy-study-e402d3d541eb4b199c57d5410f5d3c57" target="_blank" rel="noopener noreferrer">Beatriz Gómez Santamaría (músculos)</a> · <a href="https://sketchfab.com/3d-models/human-skeleton-3d-model-d04e251ee8a242fcb57db58f3989def4" target="_blank" rel="noopener noreferrer">Dinendra Neyo (esqueleto)</a> · <a href="https://sketchfab.com/3d-models/full-body-anatomy-26856c9301884233a0e85b40f0b41089" target="_blank" rel="noopener noreferrer">580000158 (anatomía general)</a>. Otros modelos y sus autores se consultan desde «Fuente».</div>
+<footer class="footer">ATLAS HUMANO 3D · Módulo cuerpo completo V4 · Contenido educativo ilustrativo, no destinado a diagnóstico médico.</footer>
+</div>
+<script>
+(function(){
+"use strict";
+const models={
+exterior:{id:"e6b7699222e149619c71fbe227fc2e1d",name:"Cuerpo completo · Exterior",url:"https://sketchfab.com/3d-models/lean-body-slim-fit-male-anatomy-character-e6b7699222e149619c71fbe227fc2e1d",glyph:"🧍"},
+musculos:{id:"e402d3d541eb4b199c57d5410f5d3c57",name:"Cuerpo completo · Músculos",url:"https://sketchfab.com/3d-models/ecorche-anatomy-study-e402d3d541eb4b199c57d5410f5d3c57",glyph:"💪"},
+huesos:{id:"d04e251ee8a242fcb57db58f3989def4",name:"Cuerpo completo · Esqueleto",url:"https://sketchfab.com/3d-models/human-skeleton-3d-model-d04e251ee8a242fcb57db58f3989def4",glyph:"🦴"},
+organos:{id:"26856c9301884233a0e85b40f0b41089",name:"Cuerpo completo · Anatomía general",url:"https://sketchfab.com/3d-models/full-body-anatomy-26856c9301884233a0e85b40f0b41089",glyph:"🫀"}
+};
+const regionData={
+cabeza:{name:"Cabeza y cuello",icon:"🧠",description:"Contiene el encéfalo y los órganos de los sentidos. El cráneo protege el cerebro y la región cervical conecta la cabeza con el tronco.",structures:[["Cerebro","Coordina pensamiento, movimiento, sensibilidad y numerosas funciones automáticas."],["Cráneo","Protege el encéfalo y da forma a la cara."],["Ojo","Capta la luz y transmite señales visuales al cerebro."],["Oído interno","Participa en la audición y el equilibrio."]],model:{exterior:{id:"41319c63c3d34f7ea6b04bf2b8c092f1",name:"Cabeza · Vista externa",url:"https://sketchfab.com/3d-models/human-head-41319c63c3d34f7ea6b04bf2b8c092f1"},musculos:{id:"066d61f8585c4e7a96249c0d2b473c4c",name:"Cabeza · Anatomía de músculos y nervios",url:"https://sketchfab.com/3d-models/human-head-anatomy-066d61f8585c4e7a96249c0d2b473c4c"},huesos:{id:"97d5757a388f4ea89ea06dbe53f96180",name:"Cabeza · Cráneo",url:"https://sketchfab.com/3d-models/realistic-human-skull-97d5757a388f4ea89ea06dbe53f96180"},organos:{id:"c9c9d4d671b94345952d012cc2ea7a24",name:"Cabeza · Cerebro",url:"https://sketchfab.com/3d-models/human-brain-c9c9d4d671b94345952d012cc2ea7a24"}}},
+torax:{name:"Tórax",icon:"🫁",description:"El tórax alberga el corazón y los pulmones. Las costillas, el esternón y la columna torácica forman una caja protectora.",structures:[["Corazón","Bombea sangre hacia los pulmones y hacia todo el organismo."],["Pulmones","Permiten el intercambio de oxígeno y dióxido de carbono."],["Costillas","Protegen los órganos torácicos y acompañan la respiración."],["Diafragma","Es el principal músculo inspiratorio."]],model:{organos:{id:"a7ac43a140644662a9b896b8a8a10f57",name:"Tórax · Sistema respiratorio",url:"https://sketchfab.com/3d-models/respiratory-system-a7ac43a140644662a9b896b8a8a10f57"}}},
+abdomen:{name:"Abdomen",icon:"🩺",description:"Aloja gran parte del aparato digestivo y estructuras del sistema urinario. La pared abdominal contiene músculos que protegen y sostienen las vísceras.",structures:[["Hígado","Procesa nutrientes, metaboliza sustancias y produce bilis."],["Estómago","Almacena y mezcla alimentos con jugos gástricos."],["Intestino delgado","Es la principal zona de absorción de nutrientes."],["Riñones","Filtran sangre y regulan el equilibrio de agua y sales."]],model:{organos:{id:"6e072566838d4797a10b849cce737f3a",name:"Abdomen · Sistema digestivo",url:"https://sketchfab.com/3d-models/digestive-system-2-6e072566838d4797a10b849cce737f3a"}}},
+pelvis:{name:"Pelvis",icon:"🦴",description:"Une la columna vertebral con los miembros inferiores. Contiene estructuras óseas, músculos del suelo pélvico y órganos de los sistemas urinario y reproductor.",structures:[["Huesos coxales","Transmiten el peso del tronco hacia las extremidades inferiores."],["Sacro","Forma la pared posterior de la pelvis y conecta con los huesos coxales."],["Vejiga","Almacena temporalmente la orina."],["Suelo pélvico","Conjunto muscular que sostiene órganos pélvicos."]],model:{}},
+brazos:{name:"Brazos y manos",icon:"💪",description:"Las extremidades superiores permiten alcanzar, manipular y realizar movimientos precisos gracias a hombros, codos, muñecas y manos.",structures:[["Húmero","Hueso largo del brazo, entre hombro y codo."],["Radio y cúbito","Forman el antebrazo y participan en sus movimientos."],["Bíceps braquial","Flexiona el codo y ayuda a supinar el antebrazo."],["Mano","Contiene numerosos huesos, músculos y tendones para la destreza fina."]],model:{}},
+piernas:{name:"Piernas y pies",icon:"🦵",description:"Las extremidades inferiores soportan el peso corporal y permiten caminar, correr y mantener el equilibrio.",structures:[["Fémur","Hueso más largo y resistente del cuerpo."],["Tibia y peroné","Conforman la estructura ósea principal de la pierna."],["Cuádriceps","Grupo muscular que extiende la rodilla."],["Pie","Distribuye cargas y permite la propulsión durante la marcha."]],model:{}}
+};
+const regionOrder=["cabeza","torax","abdomen","pelvis","brazos","piernas"];
+const labels={cabeza:"Cabeza",torax:"Tórax",abdomen:"Abdomen",pelvis:"Pelvis",brazos:"Brazos",piernas:"Piernas"};
+const walk=[
+{region:"cabeza",layer:"organos",text:"1. Comenzamos por el cerebro: dirige el movimiento, interpreta los sentidos y participa en la memoria y el pensamiento."},
+{region:"torax",layer:"organos",text:"2. En el tórax, los pulmones intercambian gases y el corazón impulsa la circulación sanguínea."},
+{region:"abdomen",layer:"organos",text:"3. En el abdomen, el aparato digestivo transforma los alimentos y absorbe nutrientes."},
+{region:"pelvis",layer:"huesos",text:"4. La pelvis sostiene el tronco y transmite cargas a las piernas."},
+{region:"piernas",layer:"musculos",text:"5. Los músculos y huesos de las piernas permiten desplazarnos y mantener la postura."}
+];
+const $=id=>document.getElementById(id);
+let layer="exterior",region="cabeza",scope="region",model=null,step=0;
+function modelForRegion(){const override=regionData[region].model[layer];return override?Object.assign({glyph:regionData[region].icon},override):models[layer]}
+function setModel(m){model=m;$("modelName").textContent=m.name;$("modelDesc").textContent=scope==="body"?"Sistema corporal completo · Modelo externo":"Región seleccionada · Modelo externo";$("originalLink").href=m.url;$("loadTitle").textContent=m.name;$("modelGlyph").textContent=m.glyph||"🧍";$("frame").removeAttribute("src");$("loadcover").hidden=false;$("loadcover").style.display="flex"}
+function renderRegions(){document.querySelectorAll(".hotspot").forEach(h=>h.classList.toggle("selected",h.dataset.region===region));$("regionButtons").innerHTML="";regionOrder.forEach(key=>{const b=document.createElement("button");b.className="regionbtn"+(region===key?" active":"");b.textContent=labels[key];b.type="button";b.addEventListener("click",()=>selectRegion(key));$("regionButtons").appendChild(b)})}
+function renderInfo(){const d=regionData[region];$("regionTitle").textContent=d.name;$("regionDescription").textContent=d.description;$("structureButtons").innerHTML="";d.structures.forEach((s,i)=>{const b=document.createElement("button");b.className="structure"+(i===0?" active":"");b.type="button";b.textContent=s[0];b.addEventListener("click",()=>{document.querySelectorAll(".structure").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("factName").textContent=s[0];$("factText").textContent=s[1]});$("structureButtons").appendChild(b)});$("factName").textContent=d.structures[0][0];$("factText").textContent=d.structures[0][1]}
+function selectRegion(key){region=key;scope="region";renderRegions();renderInfo();setModel(modelForRegion())}
+function selectLayer(key){layer=key;document.querySelectorAll(".layer").forEach(b=>{const active=b.dataset.layer===layer;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});document.querySelectorAll(".anatomy").forEach(g=>{g.hidden=g.dataset.anatomy!==layer});scope="region";setModel(modelForRegion())}
+function load3d(){if(!model)return;$("frame").src="https://sketchfab.com/models/"+model.id+"/embed?autostart=0&ui_theme=dark&ui_infos=0&ui_hint=2";$("loadcover").hidden=true;$("loadcover").style.display="none"}
+function renderWalk(){$("walkCount").textContent=(step+1)+" / "+walk.length;$("walkText").textContent=walk[step].text;$("walkPrev").disabled=step===0;$("walkNext").textContent=step===walk.length-1?"Volver al inicio ↺":"Siguiente →"}
+document.querySelectorAll(".hotspot").forEach(h=>{h.addEventListener("click",()=>selectRegion(h.dataset.region));h.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectRegion(h.dataset.region)}})});
+document.querySelectorAll(".layer").forEach(b=>b.addEventListener("click",()=>selectLayer(b.dataset.layer)));
+$("loadButton").addEventListener("click",load3d);
+$("wholeButton").addEventListener("click",()=>{scope="body";setModel(models[layer])});
+$("walkPrev").addEventListener("click",()=>{if(step>0)step--;selectLayer(walk[step].layer);selectRegion(walk[step].region);renderWalk()});
+$("walkNext").addEventListener("click",()=>{step=(step+1)%walk.length;selectLayer(walk[step].layer);selectRegion(walk[step].region);renderWalk()});
+selectLayer("exterior");selectRegion("cabeza");renderWalk();
+})();
+</script>
+</body></html>
