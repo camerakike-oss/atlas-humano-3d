@@ -272,7 +272,7 @@ return true
 function frameBody(group){if(bodyBounds)return;const box=new THREE.Box3().setFromObject(group);if(box.isEmpty())return;bodyBounds=box;const c=box.getCenter(new THREE.Vector3());homeHeight=Math.max(1,box.max.y-box.min.y);root.position.set(-c.x,-box.min.y,-c.z);neckPlane.constant=-homeHeight*headCutoff;setCamera("Frente");updateClips()}
 function activeHeadMeshes(){
 const v=HEAD_VIEWS.find(x=>x.id===headView)||HEAD_VIEWS[0];
-return allMeshes.filter(m=>v.layers.includes(m.userData.atlasLayer)&&(headView==="full"||v.re.test(m.userData.atlasName))&&!hiddenParts.has(m.uuid));
+return allMeshes.filter(m=>(headView==="full"?HEAD_VIEWS.slice(1).some(g=>g.re.test(m.userData.atlasName)):v.layers.includes(m.userData.atlasLayer)&&v.re.test(m.userData.atlasName))&&!hiddenParts.has(m.uuid));
 }
 function frameHead(view="Frente"){
 if(!camera||!controls||!bodyBounds)return;
