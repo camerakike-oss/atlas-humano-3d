@@ -132,7 +132,7 @@ const config=[
 {key:"nerves",label:"Nervios",color:"#eadf83",count:255}
 ];
 const names={skin:"Piel",muscles:"Músculos",skeleton:"Huesos",organs:"Órganos",arteries:"Arterias",veins:"Venas",nerves:"Nervios"};
-let visualStyle="realista";const baseMaterials=new Set();
+let visualStyle="realista";const baseMaterials=new Set();let presetSequence=0;
 const heartGlossary=[
 [/^left ventricle$/i,"Ventrículo izquierdo","Cavidad inferior izquierda del corazón. Su pared muscular impulsa sangre oxigenada hacia la aorta y la circulación sistémica."],
 [/^right ventricle$/i,"Ventrículo derecho","Cavidad inferior derecha del corazón. Envía sangre con poco oxígeno hacia los pulmones por el tronco pulmonar."],
@@ -197,7 +197,7 @@ function materialColor(key,name,mat){if(key!=="organs")return layerMap[key].colo
 function applyVisualStyle(){
 visualStyle=$("visualStyle").value;
 for(const m of baseMaterials)setTissueStyle(m,visualStyle);
-if(selected&&selectedMaterial&&selectedOriginal?.userData?.realColor){selectedMaterial.color.copy(visualStyle==="realista"?selectedOriginal.userData.realColor:selectedOriginal.userData.atlasColor)}
+if(selected&&selectedMaterial&&selectedOriginal?.userData?.realColor?.isColor){selectedMaterial.color.copy(visualStyle==="realista"?selectedOriginal.userData.realColor:selectedOriginal.userData.atlasColor)}
 setStatus(visualStyle==="realista"?"Tejidos realzados: materiales físicos y microtexturas procedurales.":"Paleta de atlas: colores uniformes para distinguir estructuras.");
 }
 function applyRenderQuality(){
@@ -278,7 +278,7 @@ function hidePart(){if(!selected)return;hiddenParts.add(selected.uuid);const m=s
 function focusPart(){if(!selected)return;selected.updateWorldMatrix(true,false);const box=new THREE.Box3().setFromObject(selected);if(box.isEmpty())return;const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());const d=Math.max(.18,size.length()*2.7);const dir=camera.position.clone().sub(controls.target).normalize();controls.target.copy(center);camera.position.copy(center.clone().addScaledVector(dir,d));controls.update()}
 function restoreAll(){if(isolateSnapshot)restoreIsolation();hiddenParts.clear();for(const m of allMeshes)m.visible=true;clearSelection();for(const c of config)applyLayer(c.key);setStatus("Todas las piezas ocultadas fueron restauradas.")}
 function setLayer(key,visible){if(organMode)leaveOrgan();if(isolateSnapshot)restoreIsolation();state[key].visible=visible;state[key].failed=false;applyLayer(key);updateLayerUI();if(visible&&!state[key].loaded)loadLayer(key)}
-function setPreset(p){if(organMode)leaveOrgan();restoreAll();const presets={exterior:{skin:1},musclesSolo:{muscles:1},bones:{skeleton:1},muscle:{muscles:1,skeleton:.32},organs:{organs:1,skeleton:.22},skin:{skin:.38,muscles:1,skeleton:.25},vessels:{arteries:1,veins:1,skeleton:.18},all:{skin:.15,muscles:.4,skeleton:.45,organs:1,arteries:1,veins:1,nerves:1}};
+function setPreset(p){presetSequence++;if(organMode)leaveOrgan();restoreAll();const presets={exterior:{skin:1},musclesSolo:{muscles:1},bones:{skeleton:1},muscle:{muscles:1,skeleton:.32},organs:{organs:1,skeleton:.22},skin:{skin:.38,muscles:1,skeleton:.25},vessels:{arteries:1,veins:1,skeleton:.18},all:{skin:.15,muscles:.4,skeleton:.45,organs:1,arteries:1,veins:1,nerves:1}};
 for(const c of config){const opacity=presets[p][c.key];state[c.key].opacity=opacity===undefined?1:opacity;state[c.key].visible=opacity!==undefined;$("range-"+c.key).value=Math.round(state[c.key].opacity*100);$("opacity-"+c.key).textContent=Math.round(state[c.key].opacity*100)+"%";applyLayer(c.key);if(state[c.key].visible&&!state[c.key].loaded)loadLayer(c.key)}
 document.querySelectorAll(".preset").forEach(b=>b.classList.toggle("active",b.dataset.preset===p));updateLayerUI()}
 function refreshResults(){const q=$("search").value.toLowerCase().trim(),target=$("results");target.innerHTML="";if(!q){const p=document.createElement("p");p.textContent=allMeshes.length+" estructuras cargadas. Escribí para buscar.";p.style.fontSize="11px";target.appendChild(p);return}
@@ -363,7 +363,7 @@ if(initialize()){
 loadLayer("skeleton").then(async()=>{
 if(!allMeshes.length){setStatus("No se pudo cargar el esqueleto. Probá otra capa o abrí la V7.");return}
 $("loading").hidden=true;
-if(!organMode){setPreset("bones");setStatus("Preparando la superficie corporal...");await loadLayer("skin");if(!organMode&&state.skin.loaded)setPreset("exterior")}
+if(!organMode){setPreset("bones");const expectedPreset=presetSequence;setStatus("Preparando la superficie corporal...");await loadLayer("skin");if(!organMode&&state.skin.loaded&&presetSequence===expectedPreset)setPreset("exterior")}
 });
 }
 </script>
