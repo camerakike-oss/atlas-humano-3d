@@ -270,7 +270,25 @@ window.addEventListener("keydown",e=>{if(e.key==="Escape"&&isolateSnapshot)resto
 return true
 }
 function frameBody(group){if(bodyBounds)return;const box=new THREE.Box3().setFromObject(group);if(box.isEmpty())return;bodyBounds=box;const c=box.getCenter(new THREE.Vector3());homeHeight=Math.max(1,box.max.y-box.min.y);root.position.set(-c.x,-box.min.y,-c.z);neckPlane.constant=-homeHeight*headCutoff;setCamera("Frente");updateClips()}
-function setCamera(view){if(!camera||!controls)return;viewName=view;const h=homeHeight;const target=new THREE.Vector3(0,h*.53,0);let pos;if(view==="Espalda")pos=new THREE.Vector3(0,h*.61,-h*2.2);else if(view==="Perfil")pos=new THREE.Vector3(h*2.2,h*.61,0);else pos=new THREE.Vector3(0,h*.61,h*2.2);camera.position.copy(pos);controls.target.copy(target);controls.update();$("viewLabel").textContent="VISTA "+view.toUpperCase()+" · ANATOMÍA 3D"}
+function activeHeadMeshes(){
+const v=HEAD_VIEWS.find(x=>x.id===headView)||HEAD_VIEWS[0];
+return allMeshes.filter(m=>v.layers.includes(m.userData.atlasLayer)&&(headView==="full"||v.re.test(m.userData.atlasName))&&!hiddenParts.has(m.uuid));
+}
+function frameHead(view="Frente"){
+if(!camera||!controls||!bodyBounds)return;
+viewName=view;const h=homeHeight,v=HEAD_VIEWS.find(x=>x.id===headView)||HEAD_VIEWS[0];
+let target=new THREE.Vector3(0,h*(v.focus||.9),0),dist=h*.50;
+if(headView!=="full"){
+const box=new THREE.Box3();for(const mesh of activeHeadMeshes())box.expandByObject(mesh);
+if(!box.isEmpty()){
+const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
+if(center.y>h*.70&&center.y<h*1.15){target=center;dist=Math.max(.15,Math.max(size.x,size.y,size.z)*2.9)}
+}}
+const offset=view==="Espalda"?new THREE.Vector3(0,dist*.09,-dist):view==="Perfil"?new THREE.Vector3(dist,dist*.09,0):new THREE.Vector3(0,dist*.09,dist);
+camera.position.copy(target).add(offset);controls.target.copy(target);controls.minDistance=.035;controls.maxDistance=h*2.5;controls.update();
+$("viewLabel").textContent=(v.title+" · "+view).toUpperCase();
+}
+function setCamera(view){frameHead(view)}
 function updateLayerUI(){for(const c of config){const s=state[c.key];const b=$("toggle-"+c.key),t=$("state-"+c.key);if(b){b.textContent=s.loading?"Cargando":s.failed?"Reintentar":s.visible?"Visible":"Oculta";b.classList.toggle("on",s.visible);b.setAttribute("aria-pressed",String(s.visible))}if(t)t.textContent=s.loading?"Descargando...":s.failed?"Error":s.loaded?s.meshes.length+" piezas":"Pendiente"}}
 function applyLayer(key){
 const layer=state[key];if(!layer.group)return;
@@ -304,12 +322,12 @@ function isolatePart(){if(!selected)return;if(isolateSnapshot)restoreIsolation()
 function hidePart(){if(!selected)return;hiddenParts.add(selected.uuid);const m=selected;clearSelection();m.visible=false;setStatus("Pieza ocultada. «Mostrar todo» restaura las estructuras.")}
 function focusPart(){if(!selected)return;selected.updateWorldMatrix(true,false);const box=new THREE.Box3().setFromObject(selected);if(box.isEmpty())return;const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());const d=Math.max(.18,size.length()*2.7);const dir=camera.position.clone().sub(controls.target).normalize();controls.target.copy(center);camera.position.copy(center.clone().addScaledVector(dir,d));controls.update()}
 function restoreAll(){if(isolateSnapshot)restoreIsolation();hiddenParts.clear();for(const m of allMeshes)m.visible=true;clearSelection();for(const c of config)applyLayer(c.key);setStatus("Todas las piezas ocultadas fueron restauradas.")}
-function setLayer(key,visible){if(organMode)leaveOrgan();if(isolateSnapshot)restoreIsolation();state[key].visible=visible;state[key].failed=false;applyLayer(key);updateLayerUI();if(visible&&!state[key].loaded)loadLayer(key)}
-function setPreset(p){presetSequence++;if(organMode)leaveOrgan();restoreAll();const presets={exterior:{skin:1},musclesSolo:{muscles:1},bones:{skeleton:1},muscle:{muscles:1,skeleton:.32},organs:{organs:1,skeleton:.22},skin:{skin:.38,muscles:1,skeleton:.25},vessels:{arteries:1,veins:1,skeleton:.18},all:{skin:.15,muscles:.4,skeleton:.45,organs:1,arteries:1,veins:1,nerves:1}};
+function setLayer(key,visible){headView="full";renderHeadNav();if(organMode)leaveOrgan();if(isolateSnapshot)restoreIsolation();state[key].visible=visible;state[key].failed=false;applyLayer(key);updateLayerUI();if(visible&&!state[key].loaded)loadLayer(key)}
+function setPreset(p){headView="full";renderHeadNav();presetSequence++;if(organMode)leaveOrgan();restoreAll();const presets={exterior:{skin:1},musclesSolo:{muscles:1},bones:{skeleton:1},muscle:{muscles:1,skeleton:.32},organs:{organs:1,skeleton:.22},skin:{skin:.38,muscles:1,skeleton:.25},vessels:{arteries:1,veins:1,skeleton:.18},all:{skin:.15,muscles:.4,skeleton:.45,organs:1,arteries:1,veins:1,nerves:1}};
 for(const c of config){const opacity=presets[p][c.key];state[c.key].opacity=opacity===undefined?1:opacity;state[c.key].visible=opacity!==undefined;$("range-"+c.key).value=Math.round(state[c.key].opacity*100);$("opacity-"+c.key).textContent=Math.round(state[c.key].opacity*100)+"%";applyLayer(c.key);if(state[c.key].visible&&!state[c.key].loaded)loadLayer(c.key)}
 document.querySelectorAll(".preset").forEach(b=>b.classList.toggle("active",b.dataset.preset===p));updateLayerUI()}
-function refreshResults(){const q=$("search").value.toLowerCase().trim(),target=$("results");target.innerHTML="";if(!q){const p=document.createElement("p");p.textContent=allMeshes.length+" estructuras cargadas. Escribí para buscar.";p.style.fontSize="11px";target.appendChild(p);return}
-const matches=allMeshes.filter(m=>(!organMode||(m.userData.atlasLayer==="organs"&&organGroup?.re.test(m.userData.atlasName)))&&(m.userData.atlasName.toLowerCase().includes(q)||m.userData.atlasLabel.toLowerCase().includes(q))).slice(0,18);
+function refreshResults(){const q=$("search").value.toLowerCase().trim(),target=$("results");target.innerHTML="";if(!q){const p=document.createElement("p");p.textContent="Estructuras de la región actual. Escribí para filtrar por nombre.";p.style.fontSize="11px";target.appendChild(p)}
+const matches=activeHeadMeshes().filter(m=>(!organMode||(m.userData.atlasLayer==="organs"&&organGroup?.re.test(m.userData.atlasName)))&&(m.userData.atlasName.toLowerCase().includes(q)||m.userData.atlasLabel.toLowerCase().includes(q))).sort((a,b)=>a.userData.atlasLabel.localeCompare(b.userData.atlasLabel,"es")).slice(0,42);
 if(!matches.length){const p=document.createElement("p");p.textContent="Sin resultados en las capas cargadas.";p.style.fontSize="11px";target.appendChild(p);return}
 for(const m of matches){const b=document.createElement("button");b.type="button";b.className="result";const title=document.createElement("span");title.textContent=m.userData.atlasLabel;const small=document.createElement("small");small.textContent=names[m.userData.atlasLayer];b.append(title,small);b.addEventListener("click",()=>{const k=m.userData.atlasLayer;if(!state[k].visible)setLayer(k,true);m.visible=true;hiddenParts.delete(m.uuid);choosePart(m);focusPart()});target.appendChild(b)}}
 function focusRegion(name){const fractions={cabeza:.92,torax:.74,abdomen:.56,pelvis:.41,brazos:.72,piernas:.24};const y=homeHeight*(fractions[name]||.53);const x=name==="brazos"?homeHeight*.19:0;const target=new THREE.Vector3(x,y,0);controls.target.copy(target);camera.position.copy(target.clone().add(new THREE.Vector3(0,.09,homeHeight*.85)));controls.update();$("viewLabel").textContent="REGIÓN: "+name.toUpperCase();document.querySelectorAll(".region").forEach(b=>b.classList.toggle("active",b.dataset.region===name))}
@@ -366,13 +384,50 @@ for(const suffix of ["A","B"])for(const id of ["clip"+suffix,"axis"+suffix,"dept
 for(const [id,view] of [["front","Frente"],["back","Espalda"],["side","Perfil"],["resetCamera","Frente"]]){$(id).addEventListener("click",()=>{if(organMode)frameOrgan(view)})}
 $("pinEnabled").addEventListener("change",updatePin);
 $("saveImage").addEventListener("click",saveImage);
-$("tourNext").addEventListener("click",()=>{tourIndex=(tourIndex+1)%tourStops.length;runTour()});
-$("tourPrev").addEventListener("click",()=>{tourIndex=tourIndex<=0?0:tourIndex-1;runTour()});
-$("tourExit").addEventListener("click",()=>{tourIndex=-1;$("tourCount").textContent="RECORRIDO FINALIZADO";$("tourText").textContent="Podés explorar cualquier órgano libremente o volver al cuerpo completo.";leaveOrgan()});
+$("tourNext").addEventListener("click",()=>{headTourIndex=(headTourIndex+1)%HEAD_TOUR.length;runHeadTour()});
+$("tourPrev").addEventListener("click",()=>{headTourIndex=headTourIndex<=0?0:headTourIndex-1;runHeadTour()});
+$("tourExit").addEventListener("click",()=>{headTourIndex=-1;headTourToken++;$("tourCount").textContent="RECORRIDO FINALIZADO";$("tourText").textContent="Podés explorar libremente cualquier estructura de la cabeza.";});
 organUI();
+
+function renderHeadNav(){
+const box=$("headRegions");box.innerHTML="";
+for(const v of HEAD_VIEWS){const b=document.createElement("button");b.type="button";b.className="headRegion"+(headView===v.id?" active":"");b.textContent=v.icon+" "+v.label;b.setAttribute("aria-pressed",String(headView===v.id));b.addEventListener("click",()=>{headTourIndex=-1;selectHeadView(v.id)});box.appendChild(b)}
+}
+async function selectHeadView(id){
+const v=HEAD_VIEWS.find(x=>x.id===id);if(!v)return;
+const token=++headRequest;headView=id;
+if(isolateSnapshot)restoreIsolation();hiddenParts.clear();clearSelection();
+for(const c of config){state[c.key].visible=v.layers.includes(c.key);state[c.key].opacity=1;$("range-"+c.key).value=100;$("opacity-"+c.key).textContent="100%"}
+renderHeadNav();updateLayerUI();
+for(const c of config)applyLayer(c.key);
+$("selectedLayer").textContent="REGIÓN ANATÓMICA";$("selectedName").textContent=v.title;$("selectedDesc").textContent=v.desc;
+$("infoTitle").textContent="Anatomía real en 3D";$("infoText").textContent="Seleccioná una pieza para ver su nombre y función. Podés aislarla y girarla.";
+$("headNavNote").textContent=v.desc;$("search").value="";$("modelStatus").textContent="CARGANDO REGIÓN";
+await Promise.all(v.layers.filter(key=>!state[key].loaded).map(key=>loadLayer(key)));
+if(token!==headRequest)return;
+for(const c of config)applyLayer(c.key);
+const n=activeHeadMeshes().length;
+$("countLabel").textContent=n+" PIEZAS DE LA REGIÓN";$("modelStatus").textContent=n?"CABEZA 3D ACTIVA":"SIN PIEZAS";
+frameHead("Frente");updateClips();refreshResults();
+setStatus(n?"Explorando "+v.title+". Seleccioná una estructura para aprender más.":"No se encontraron piezas para esta vista. Probá otra región.");
+}
+let headTourToken=0;
+async function runHeadTour(){
+if(headTourIndex<0)return;
+const index=headTourIndex,token=++headTourToken,step=HEAD_TOUR[index];
+$("tourCount").textContent="PARADA "+(index+1)+" / "+HEAD_TOUR.length;
+$("tourText").textContent=step.title+" — "+step.text;
+$("tourNext").textContent=index===HEAD_TOUR.length-1?"Repetir recorrido ↺":"Siguiente →";
+await selectHeadView(step.view);
+if(headTourIndex!==index||token!==headTourToken)return;
+const part=activeHeadMeshes().find(m=>step.re.test(m.userData.atlasName));
+if(part){choosePart(part);focusPart()}
+}
+renderHeadNav();
+
 for(const c of config){const s=state[c.key];const item=document.createElement("div");item.className="layeritem";item.innerHTML='<div class="layerrow"><div class="layerlabel"><span class="dot" style="background:'+c.color+'"></span><span>'+c.label+'</span></div><button class="toggle" type="button" id="toggle-'+c.key+'" aria-pressed="false">Oculta</button></div><input id="range-'+c.key+'" type="range" min="5" max="100" value="100" aria-label="Transparencia de '+c.label+'"><div class="layerfoot"><span id="state-'+c.key+'">Pendiente</span><span id="opacity-'+c.key+'">100%</span></div>';$("layerList").appendChild(item);$("toggle-"+c.key).addEventListener("click",()=>setLayer(c.key,!s.visible));$("range-"+c.key).addEventListener("input",e=>{s.opacity=Number(e.target.value)/100;$("opacity-"+c.key).textContent=e.target.value+"%";applyLayer(c.key)})}
 for(const [key,label] of Object.entries({exterior:"Piel realista",musclesSolo:"Solo músculos",bones:"Solo huesos",muscle:"Músculos + huesos",organs:"Órganos + huesos",skin:"Piel transparente",vessels:"Circulación",all:"Todas las capas"})){const b=document.createElement("button");b.className="preset";b.dataset.preset=key;b.textContent=label;b.addEventListener("click",()=>setPreset(key));$("presets").appendChild(b)}
-for(const [key,label] of Object.entries({cabeza:"Cabeza",torax:"Tórax",abdomen:"Abdomen",pelvis:"Pelvis",brazos:"Brazos",piernas:"Piernas"})){const b=document.createElement("button");b.className="region";b.dataset.region=key;b.textContent=label;b.addEventListener("click",()=>focusRegion(key));$("regions").appendChild(b)}
+
 $("front").addEventListener("click",()=>{if(!organMode)setCamera("Frente")});$("back").addEventListener("click",()=>{if(!organMode)setCamera("Espalda")});$("side").addEventListener("click",()=>{if(!organMode)setCamera("Perfil")});$("resetCamera").addEventListener("click",()=>{if(!organMode)setCamera("Frente")});
 $("resetAll").addEventListener("click",()=>{restoreAll();setPreset("bones");setCamera("Frente")});
 $("isolate").addEventListener("click",isolatePart);$("hidePart").addEventListener("click",hidePart);$("focus").addEventListener("click",focusPart);$("restore").addEventListener("click",restoreAll);$("search").addEventListener("input",refreshResults);
@@ -388,9 +443,9 @@ $("spinToggle").textContent=controls.autoRotate?"■ Detener giro":"↻ Giro aut
 updateLayerUI();refreshResults();
 if(initialize()){
 loadLayer("skeleton").then(async()=>{
-if(!allMeshes.length){setStatus("No se pudo cargar el esqueleto. Probá otra capa o abrí la V7.");return}
+if(!allMeshes.length){setStatus("No se pudo cargar el esqueleto. Probá actualizar o abrir la V8.");return}
 $("loading").hidden=true;
-if(!organMode){setPreset("bones");const expectedPreset=presetSequence;setStatus("Preparando la superficie corporal...");await loadLayer("skin");if(!organMode&&state.skin.loaded&&presetSequence===expectedPreset)setPreset("exterior")}
+if(headRequest===0)await selectHeadView("full");
 });
 }
 </script>
