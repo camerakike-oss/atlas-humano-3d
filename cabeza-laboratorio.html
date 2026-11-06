@@ -413,7 +413,8 @@ for(const suffix of ["A","B"])for(const id of ["clip"+suffix,"axis"+suffix,"dept
 for(const [id,view] of [["front","Frente"],["back","Espalda"],["side","Perfil"],["resetCamera","Frente"]]){$(id).addEventListener("click",()=>{if(organMode)frameOrgan(view)})}
 $("pinEnabled").addEventListener("change",updatePin);
 $("multiLabelsEnabled").addEventListener("change",refreshMultiLabels);
-$("dissectSlider").addEventListener("input",e=>applyDissection(Number(e.target.value)));
+$("dissectSlider").addEventListener("input",e=>{const i=Number(e.target.value),step=DISSECTION[i];$("dissectStepLabel").textContent="Paso "+(i+1)+" de "+DISSECTION.length;$("dissectTitle").textContent=step.title;$("dissectDesc").textContent=step.desc});
+$("dissectSlider").addEventListener("change",e=>applyDissection(Number(e.target.value)));
 $("dissectPrev").addEventListener("click",()=>applyDissection(Math.max(0,dissectIndex-1)));
 $("dissectNext").addEventListener("click",()=>applyDissection((dissectIndex+1)%DISSECTION.length));
 $("explodeLayers").addEventListener("input",e=>setExplode(e.target.value));
