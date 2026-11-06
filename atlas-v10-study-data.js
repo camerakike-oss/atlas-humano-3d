@@ -1,0 +1,11 @@
+// Cuestionario educativo para el estudio de cabeza y cuello (V10).
+export const HEAD_QUIZ=[
+{question:"¿Qué hueso forma la frente?",options:["Hueso frontal","Mandíbula","Hueso temporal"],correct:0,explanation:"El hueso frontal forma la frente y participa en el techo de las órbitas.",view:"skull",target:/^frontal bone$/i},
+{question:"¿Qué músculo eleva la mandíbula durante la masticación?",options:["Orbicular de los ojos","Masetero","Esternocleidomastoideo"],correct:1,explanation:"El masetero es uno de los principales músculos que elevan la mandíbula.",view:"muscles",target:/masseter/i},
+{question:"¿Qué estructura conecta los dos hemisferios cerebrales?",options:["Cerebelo","Cuerpo calloso","Nervio óptico"],correct:1,explanation:"El cuerpo calloso está formado por fibras que conectan los hemisferios cerebrales.",view:"brain",target:/corpus callosum/i},
+{question:"¿Qué nervio transmite gran parte de la sensibilidad facial?",options:["Trígémino (V)","Vago (X)","Óptico (II)"],correct:0,explanation:"El trigémino es el principal nervio sensitivo de la cara y participa en la masticación.",view:"nerves",target:/trigeminal nerve/i},
+{question:"¿Cuál es el huesecillo más cercano a la ventana oval del oído interno?",options:["Yunque","Martillo","Estribo"],correct:2,explanation:"El estribo transmite vibraciones desde el oído medio hacia la ventana oval.",view:"ears",target:/stapes/i},
+{question:"¿Qué arterias aportan sangre a la circulación cerebral posterior?",options:["Arterias vertebrales","Arterias faciales","Arterias coronarias"],correct:0,explanation:"Las arterias vertebrales se unen para formar la basilar, fundamental en la circulación posterior.",view:"vessels",target:/vertebral artery/i},
+{question:"¿Qué parte del encéfalo coordina los movimientos y el equilibrio?",options:["Cerebelo","Iris","Mandíbula"],correct:0,explanation:"El cerebelo coordina movimientos y contribuye al equilibrio y la postura.",view:"brain",target:/cerebell/i},
+{question:"¿Qué estructura controla el tamaño de la pupila?",options:["Córnea","Iris","Esclerótica"],correct:1,explanation:"El iris modifica el diámetro pupilar y regula la cantidad de luz que ingresa al ojo.",view:"eyes",target:/iris/i}
+];
