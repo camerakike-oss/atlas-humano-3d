@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071522">
+<meta name="description" content="Laboratorio de órganos 3D: aislar, seleccionar estructuras internas, cortar y explorar anatomía real.">
+<title>Atlas Humano V6 · Laboratorio de órganos</title>
+<style>
+:root{color-scheme:dark;--bg:#071521;--card:#0f2639;--line:#29485c;--text:#eaf5fc;--muted:#a8bdcb;--mint:#8be5d8;--blue:#8dc9e8;--pink:#e6a5b6}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 35% -10%,#204e5e75,transparent 46%),#071521;color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,input,select,a{font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}a{color:#a4e4ee}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+.shell{max-width:1540px;margin:auto;padding:17px 22px 35px}
+.nav{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#0d283a;border:1px solid #33586b;padding:13px 16px;border-radius:17px}.brand{font-weight:850;letter-spacing:.5px}.brand span{color:var(--mint)}.navlinks{display:flex;gap:7px;flex-wrap:wrap}.navlinks a{display:inline-flex;text-decoration:none;border:1px solid #3a5b6d;background:#15384d;color:#d8edf7;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:700}.navlinks a.active{background:var(--mint);color:#082b33;border-color:var(--mint)}
+.hero{margin:27px 0 20px;display:flex;justify-content:space-between;align-items:end;gap:16px}.hero h1{font-size:clamp(32px,4.4vw,57px);letter-spacing:-1.7px;line-height:1.1;margin:8px 0 11px}.hero h1 em{font-style:normal;color:var(--mint)}.hero p{color:#acc5d4;max-width:790px;margin:0}.kicker{color:var(--mint);font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:850}.pill{border:1px solid #477987;border-radius:13px;padding:12px 17px;background:#133746;text-align:center;min-width:150px}.pill b{display:block;font-size:28px;color:#9de9df}.pill small{color:#a4c4d1;font-size:10px}
+.layout{display:grid;grid-template-columns:minmax(250px,.72fr) minmax(0,1.58fr) minmax(270px,.79fr);gap:15px;align-items:start}
+.panel{border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,#102b40,#0b1e2e);box-shadow:0 18px 46px #0005;overflow:hidden}
+.head{padding:16px 17px;border-bottom:1px solid #2c495d}.head h2{font-size:16px;margin:0}.head p{color:#9cb7c8;font-size:12px;margin:5px 0 0}
+.sidebar{padding:14px}.small{font-size:10px;color:#87dfd3;letter-spacing:1.2px;font-weight:850;text-transform:uppercase;margin:6px 0 10px}
+.groupList{display:grid;gap:8px}.groupbtn{border:1px solid #34576a;border-radius:13px;background:#132e43;color:#d7eaf4;text-align:left;padding:12px 13px;font-size:13px;font-weight:750;display:flex;justify-content:space-between;gap:9px;align-items:center}.groupbtn.active{background:#205b62;border-color:#8ee7d9}.groupbtn small{font-size:10px;color:#9fbccf}.groupbtn.active small{color:#dcfff7}
+.divider{border-top:1px solid #29485d;margin:16px 0}
+.control{margin:12px 0}.control label{display:flex;justify-content:space-between;gap:8px;color:#cfe5ef;font-size:12px;font-weight:750}.control label output{color:#8ee7d9}.control input[type=range]{width:100%;accent-color:#91e9dc;margin:9px 0 0}
+.select{width:100%;padding:10px 12px;border-radius:10px;background:#123147;color:#e5f7ff;border:1px solid #40647a;margin-top:8px}
+.toggle{display:flex;align-items:center;gap:9px;color:#c6dfe9;font-size:12px;margin:12px 0;cursor:pointer}.toggle input{accent-color:#87e3d7;width:17px;height:17px}
+.preset{display:grid;grid-template-columns:1fr 1fr;gap:8px}.preset button,.btn{background:#194057;color:#dff3fc;border:1px solid #42667a;border-radius:10px;padding:10px;font-size:12px;font-weight:750}.preset button:hover,.btn:hover{background:#23546b}
+.stagehead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px}.stagehead h2{font-size:17px;margin:0}.stagehead p{color:#a1bacb;font-size:11px;margin:3px 0 0}.stagehead .tag{font-size:10px;border:1px solid #3a6276;padding:7px 9px;border-radius:9px;color:#c0e6ed;white-space:nowrap}
+.stage{height:clamp(475px,60vw,710px);background:radial-gradient(circle,#23475a,#071724 68%);position:relative;overflow:hidden}.stage:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(#9ad8e007 1px,transparent 1px),linear-gradient(90deg,#9ad8e007 1px,transparent 1px);background-size:31px 31px}
+#canvas{width:100%;height:100%;display:block;position:absolute;inset:0;touch-action:none}
+.overlay{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:7px;pointer-events:none}.overlay span{background:#071d2ecf;border:1px solid #345e6d;border-radius:9px;padding:7px 9px;font-size:10px;color:#d2eaf3}
+.loading{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:13px;text-align:center;background:#081b2bf2;padding:25px}.loading .icon{font-size:57px}.loading h3{margin:0;font-size:19px}.loading p{max-width:370px;margin:0;color:#b4cbd9;font-size:12px}.loading a{font-size:12px}.bar{width:min(285px,80%);height:7px;background:#22475b;border-radius:99px;overflow:hidden}.bar span{height:100%;display:block;background:#91e6d9;width:0;transition:width .25s}
+.foot{display:flex;gap:7px;flex-wrap:wrap;border-top:1px solid #294a5d;padding:12px}.foot button{border:1px solid #3d6075;background:#173c52;color:#e2f2f8;padding:9px 11px;border-radius:9px;font-size:11px;font-weight:750}
+.sideinfo{padding:16px}.sideinfo h2{font-size:22px;line-height:1.25;letter-spacing:-.4px;margin:5px 0 10px}.sideinfo p{color:#b4cbd9;font-size:12px;line-height:1.65;margin:0 0 12px}
+.search{display:block;width:100%;padding:11px 12px;border:1px solid #3d6076;background:#081f30;border-radius:10px;color:#eaf6fc;margin:10px 0}.search::placeholder{color:#7f9db1}
+.parts{display:grid;gap:6px;max-height:310px;overflow:auto;scrollbar-color:#3d6379 transparent}.part{background:#123044;color:#d9ecf5;border:1px solid #35576b;border-radius:9px;text-align:left;padding:9px 10px;font-size:11px;display:flex;justify-content:space-between;gap:8px}.part small{color:#8baabd}.part.active{background:#25576a;border-color:#8ee4dc}
+.details{background:#153b4b;border:1px solid #407483;border-radius:13px;padding:14px;margin-top:15px;min-height:126px}.details strong{font-size:14px}.details p{margin:7px 0 0}.details .raw{font-size:10px;color:#9bbbc8;margin-top:9px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:13px}.actions button{background:#19445a;color:#e3f5fc;border:1px solid #4b7a89;border-radius:10px;padding:10px 6px;font-size:11px;font-weight:800}
+.callout{margin-top:16px;padding:13px 14px;border:1px solid #3c6372;border-radius:13px;background:#0f2e3e;color:#a7c5d4;font-size:12px;line-height:1.65}
+.sources{margin-top:18px;padding:14px 17px;border:1px solid #2d4d60;border-radius:14px;background:#0b2434;color:#9cb7c9;font-size:11px;line-height:1.7}.sources strong{color:#e0f2fa}.sources a{color:#a5dfed}.footer{padding:19px 0;color:#86a8ba;font-size:11px}
+[hidden]{display:none!important}
+@media(max-width:1250px){.layout{grid-template-columns:minmax(240px,.68fr) minmax(0,1.32fr)}.right{grid-column:1/-1}.sideinfo{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.sideinfo .wide{grid-column:1/-1}}
+@media(max-width:760px){.shell{padding:10px}.nav{padding:11px}.navlinks a{padding:8px;font-size:11px}.hero{margin:23px 3px 17px}.hero h1{font-size:35px}.pill{display:none}.layout{grid-template-columns:1fr}.right{grid-column:auto}.sideinfo{display:block}.stage{height:470px}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Módulos del atlas"><div class="brand">✧ ATLAS HUMANO <span>3D</span></div><div class="navlinks"><a href="index.html#cerebro">🧠 Cerebro</a><a href="index.html#cabeza">👤 Cabeza</a><a href="index.html#corazon">🫀 Corazón</a><a href="cuerpo.html">🧍 V4</a><a href="capas.html">◈ Capas V5</a><a class="active" href="organos.html" aria-current="page">🔬 Órganos V6</a></div></nav>
+<header class="hero"><div><div class="kicker">Atlas humano · Laboratorio de órganos</div><h1>Elegí un órgano.<br><em>Exploralo por dentro.</em></h1><p>Un modelo 3D anatómico con órganos y subestructuras reales. Podés seleccionar cavidades del corazón, aislar piezas, separar componentes y aplicar un corte geométrico para estudiar su forma.</p></div><div class="pill"><b>V6</b><small>EXPLORACIÓN ANATÓMICA</small></div></header>
+<main class="layout">
+<section class="panel"><div class="head"><h2>Biblioteca de órganos</h2><p>Elegí una región anatómica para explorarla.</p></div><div class="sidebar">
+<div class="small">Regiones disponibles</div><div class="groupList" id="groups"></div>
+<div class="divider"></div><div class="small">Herramientas de disección virtual</div>
+<label class="toggle"><input id="context" type="checkbox"> Mostrar otros órganos como contexto</label>
+<div class="control"><label for="opacity">Transparencia del grupo <output id="opacityValue">100%</output></label><input id="opacity" type="range" min="20" max="100" value="100"></div>
+<div class="control"><label for="explode">Separar las piezas <output id="explodeValue">0%</output></label><input id="explode" type="range" min="0" max="100" value="0"></div>
+<div class="divider"></div>
+<label class="toggle"><input id="cut" type="checkbox"> Activar corte geométrico</label>
+<div class="control"><label for="axis">Orientación del corte</label><select id="axis" class="select"><option value="x">Lateral (izquierda–derecha)</option><option value="y">Horizontal (arriba–abajo)</option><option value="z">Frontal (adelante–atrás)</option></select></div>
+<div class="control"><label for="depth">Profundidad del corte <output id="depthValue">50%</output></label><input id="depth" type="range" min="2" max="98" value="50"></div>
+<div class="preset"><button id="resetTools" type="button">Restaurar herramientas</button><button id="isolateGroup" type="button">Aislar grupo</button></div>
+</div></section>
+<section class="panel">
+<div class="stagehead"><div><h2 id="viewTitle">Corazón y sus cavidades</h2><p>Arrastrá para girar · Zoom con rueda o dos dedos · Tocá una pieza</p></div><span class="tag" id="statusBadge">PREPARANDO</span></div>
+<div class="stage" id="stage"><canvas id="canvas" aria-label="Visor tridimensional de órganos humanos"></canvas><div class="overlay"><span id="viewLabel">ÓRGANOS · MODELO ANATÓMICO</span><span id="count">0 PIEZAS</span></div>
+<div class="loading" id="loading"><div class="icon">🫀</div><h3 id="loadTitle">Cargando anatomía real</h3><p id="loadDesc">Estamos preparando los órganos tridimensionales y sus subestructuras. Necesitás conexión a Internet.</p><div class="bar"><span id="progress"></span></div><a href="capas.html">Volver a las capas V5</a></div>
+</div>
+<div class="foot"><button id="front" type="button">Frente</button><button id="back" type="button">Espalda</button><button id="left" type="button">Perfil</button><button id="fit" type="button">Centrar grupo</button><button id="all" type="button">Cuerpo completo</button></div>
+</section>
+<aside class="panel right"><div class="head"><h2>Estructuras anatómicas</h2><p>Seleccioná una parte y explorá su relación con el órgano.</p></div><div class="sideinfo">
+<div><div class="kicker" id="partType">REGIÓN ANATÓMICA</div><h2 id="partName">Corazón</h2><p id="partDescription">El corazón impulsa la sangre hacia los pulmones y hacia el resto del organismo. Este modelo incluye cámaras y válvulas que podés examinar individualmente.</p><div class="details" aria-live="polite"><strong id="detailTitle">Seleccioná una pieza</strong><p id="detailText">Podés tocar una estructura en el visor o elegirla en la lista.</p><div class="raw" id="rawName"></div></div></div>
+<div><div class="small">Buscar dentro de esta región</div><input id="search" class="search" type="search" placeholder="Aurícula, ventrículo, válvula..." aria-label="Buscar piezas"><div class="parts" id="parts"></div><div class="actions"><button id="focusPart" type="button" disabled>Acercar pieza</button><button id="isolatePart" type="button" disabled>Aislar pieza</button><button id="hidePart" type="button" disabled>Ocultar pieza</button><button id="restorePart" type="button">Mostrar todo</button></div></div>
+<div class="wide callout"><strong>Sobre los cortes:</strong> el corte elimina visualmente parte de la superficie 3D, pero no reconstruye tejido microscópico ni cavidades que el modelo no contenga. En el corazón sí hay varias cavidades y válvulas modeladas por separado. Es una herramienta educativa, no una disección clínica.</div>
+</div></aside>
+</main>
+<div class="sources"><strong>Origen y licencias:</strong> geometría de <a href="https://www.z-anatomy.com/" target="_blank" rel="noopener noreferrer">Z-Anatomy</a> y <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/" target="_blank" rel="noopener noreferrer">BodyParts3D</a>, optimizada para web por <a href="https://github.com/SeemaBansal1/3d-human-body-anatomy" target="_blank" rel="noopener noreferrer">Human Anatomy 3D</a>. Las adaptaciones de geometría están sujetas a CC BY-SA 4.0 / CC BY-SA 2.1 JP. El conjunto de órganos incluye un modelo renal bajo CC BY-NC 4.0: uso educativo no comercial. Modelos externos descargados desde el repositorio original; no son herramientas de diagnóstico.</div>
+<footer class="footer">ATLAS HUMANO 3D · LABORATORIO V6 · EXPLORACIÓN EDUCATIVA</footer>
+</div>
+<script type="module">
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
+import {DRACOLoader} from "three/addons/loaders/DRACOLoader.js";
+const $=id=>document.getElementById(id);
+const groupDefs=[
+{id:"heart",name:"Corazón",icon:"🫀",subtitle:"Cámaras, músculos papilares y válvulas",re:/atrium|ventricle|atrioventricular valve|pulmonary valve|coronary leaflet|papillary muscle|semilunar leaflet/i,description:"El corazón bombea sangre por dos circuitos: pulmonar y sistémico. Sus aurículas, ventrículos y válvulas pueden estudiarse como estructuras individuales."},
+{id:"lungs",name:"Pulmones",icon:"🫁",subtitle:"Lóbulos, tráquea y bronquios",re:/lung|bronchus|bronchi|trachea/i,description:"Los pulmones intercambian oxígeno y dióxido de carbono. Los bronquios conducen el aire hacia sus lóbulos."},
+{id:"brain",name:"Cerebro",icon:"🧠",subtitle:"Corteza, cerebelo y tronco",re:/brain|cerebr|gyrus|sulcus|cerebell|pons|medulla oblongata|midbrain|corpus callosum|insula|pituitary|pineal|thalam|hypophysis/i,description:"El encéfalo integra señales, regula funciones vitales y participa en memoria, movimiento, lenguaje y percepción."},
+{id:"digestive",name:"Digestivo",icon:"🩺",subtitle:"Estómago, hígado e intestinos",re:/stomach|liver|gallbladder|bile duct|pancrea|duodenum|jejunum|ileum|colon|appendix|oesophagus|pharynx/i,description:"El aparato digestivo transforma los alimentos, absorbe nutrientes y elimina los residuos."},
+{id:"urinary",name:"Urinario",icon:"💧",subtitle:"Riñones, uréteres y vejiga",re:/kidney|renal pelvis|ureter|urinary bladder|suprarenal/i,description:"Los riñones filtran la sangre; los uréteres llevan orina a la vejiga, donde se almacena."},
+{id:"eyes",name:"Ojos",icon:"👁️",subtitle:"Iris, córnea y globo ocular",re:/cornea|iris|sclera|eyeball|lens|retina/i,description:"El ojo recibe la luz y la transforma en señales nerviosas que el cerebro interpreta como imágenes."},
+{id:"all",name:"Todos los órganos",icon:"🧍",subtitle:"Exploración de conjunto",re:/.*/,description:"Vista conjunta de los órganos presentes en este modelo anatómico."}
+];
+const glossary=[
+[/right atrium/i,["Aurícula derecha","Recibe sangre venosa procedente del cuerpo."]],
+[/left atrium/i,["Aurícula izquierda","Recibe sangre oxigenada procedente de los pulmones."]],
+[/right ventricle/i,["Ventrículo derecho","Impulsa sangre hacia la circulación pulmonar."]],
+[/left ventricle/i,["Ventrículo izquierdo","Impulsa sangre hacia la aorta y el resto del cuerpo."]],
+[/atrioventricular valve|tricuspid/i,["Válvula auriculoventricular","Impide el retroceso de sangre entre aurícula y ventrículo."]],
+[/coronary leaflet|aortic valve/i,["Valva de la válvula aórtica","Participa en la salida de sangre del ventrículo izquierdo hacia la aorta."]],
+[/pulmonary valve|semilunar leaflet/i,["Valva de la válvula pulmonar","Participa en la salida de sangre del ventrículo derecho hacia el tronco pulmonar."]],
+[/papillary muscle/i,["Músculo papilar","Ayuda a estabilizar las válvulas auriculoventriculares mediante las cuerdas tendinosas."]],
+[/superior lobe of right lung/i,["Lóbulo superior del pulmón derecho","Forma la región superior del pulmón derecho."]],
+[/middle lobe of right lung/i,["Lóbulo medio del pulmón derecho","Es uno de los tres lóbulos del pulmón derecho."]],
+[/inferior lobe of right lung/i,["Lóbulo inferior del pulmón derecho","Forma la región inferior del pulmón derecho."]],
+[/superior lobe of left lung/i,["Lóbulo superior del pulmón izquierdo","Forma la región superior del pulmón izquierdo."]],
+[/inferior lobe of left lung/i,["Lóbulo inferior del pulmón izquierdo","Forma la región inferior del pulmón izquierdo."]],
+[/bronchus|bronchi/i,["Bronquio","Conduce el aire hacia los pulmones y sus divisiones."]],
+[/trachea/i,["Tráquea","Conduce el aire desde la laringe hacia los bronquios."]],
+[/cerebell/i,["Cerebelo","Coordina movimientos, postura y equilibrio."]],
+[/corpus callosum/i,["Cuerpo calloso","Conecta ambos hemisferios cerebrales."]],
+[/precentral gyrus/i,["Giro precentral","Contiene una parte esencial de la corteza motora primaria."]],
+[/postcentral gyrus/i,["Giro poscentral","Contiene la corteza somatosensitiva primaria."]],
+[/gyrus/i,["Giro cerebral","Pliegue de la corteza cerebral."]],
+[/sulcus/i,["Surco cerebral","Hendidura entre pliegues de la corteza cerebral."]],
+[/pons/i,["Puente troncoencefálico","Conecta regiones del encéfalo y participa en múltiples funciones automáticas."]],
+[/medulla oblongata/i,["Bulbo raquídeo","Participa en el control de la respiración y otras funciones vitales."]],
+[/midbrain/i,["Mesencéfalo","Parte del tronco encefálico relacionada con movimiento y reflejos."]],
+[/stomach/i,["Estómago","Mezcla los alimentos con jugos gástricos."]],
+[/liver/i,["Hígado","Procesa nutrientes, produce bilis y metaboliza sustancias."]],
+[/gallbladder/i,["Vesícula biliar","Almacena y concentra bilis."]],
+[/pancrea/i,["Páncreas","Produce enzimas digestivas y hormonas como insulina."]],
+[/duodenum/i,["Duodeno","Primera porción del intestino delgado."]],
+[/jejunum/i,["Yeyuno","Segmento del intestino delgado que absorbe nutrientes."]],
+[/colon/i,["Colon","Absorbe agua y participa en la formación de las heces."]],
+[/appendix/i,["Apéndice","Estructura tubular unida al ciego."]],
+[/kidney/i,["Riñón","Filtra sangre y contribuye a regular agua, sales y presión arterial."]],
+[/renal pelvis/i,["Pelvis renal","Recoge orina dentro del riñón y la conduce al uréter."]],
+[/ureter/i,["Uréter","Conduce orina desde el riñón hasta la vejiga."]],
+[/urinary bladder/i,["Vejiga urinaria","Almacena orina antes de la micción."]],
+[/cornea/i,["Córnea","Superficie anterior transparente del ojo que ayuda a enfocar la luz."]],
+[/iris/i,["Iris","Regula el tamaño de la pupila."]],
+[/sclera/i,["Esclerótica","Capa externa resistente del globo ocular."]]
+];
+const colorFor=raw=>/heart|atrium|ventricle|valve|leaflet/i.test(raw)?"#b94d65":/lung/i.test(raw)?"#ce9ca9":/brain|cerebr|gyrus|sulcus/i.test(raw)?"#d5a2a5":/liver/i.test(raw)?"#a05b60":/kidney/i.test(raw)?"#ae7279":/iris/i.test(raw)?"#719eab":"#c9929d";
+const canvas=$("canvas"),stage=$("stage");
+let renderer,scene,camera,controls,root,raycaster,loader,modelLoaded=false;
+let meshes=[],groupId="heart",active=[],selected=null,isolated=null,hidden=new Set(),groupBox=new THREE.Box3(),bodyBox=new THREE.Box3(),bodyHeight=1.7;
+let clipEnabled=false,axis="x",clipPlane=new THREE.Plane(new THREE.Vector3(1,0,0),0);
+let context=false,opacity=1,explode=0;
+const initialQuery=new URLSearchParams(location.search).get("pieza");
+const modelUrls=[
+"https://cdn.jsdelivr.net/gh/SeemaBansal1/3d-human-body-anatomy@main/web/public/models/organs.glb",
+"https://raw.githubusercontent.com/SeemaBansal1/3d-human-body-anatomy/main/web/public/models/organs.glb"
+];
+function glossaryFor(raw){for(const [re,data] of glossary)if(re.test(raw))return data;return [raw.replace(/\.l$/," (izquierda)").replace(/\.r$/," (derecha)"),"Estructura anatómica del modelo 3D. Su forma y relación con las piezas cercanas pueden estudiarse en el visor."]}
+function group(){return groupDefs.find(g=>g.id===groupId)||groupDefs[0]}
+function modelName(m){return m.userData.nameOriginal||m.name||"Estructura"}
+function labelName(m){const raw=modelName(m);const [name]=glossaryFor(raw);return name}
+function boxFor(list){const b=new THREE.Box3();for(const m of list)b.expandByObject(m);return b}
+function worldCenter(b){return b.getCenter(new THREE.Vector3())}
+function setStatus(msg){$("statusBadge").textContent=msg}
+function showMessage(title,desc){$("loadTitle").textContent=title;$("loadDesc").textContent=desc}
+function resetPositions(){for(const m of meshes)if(m.userData.basePosition)m.position.copy(m.userData.basePosition)}
+function setCamera(dir="front",full=false){if(!modelLoaded)return;resetPositions();const b=full?bodyBox:groupBox;if(b.isEmpty())return;const center=worldCenter(b),size=b.getSize(new THREE.Vector3());const radius=Math.max(size.x,size.y,size.z,.14);const distance=radius*2.7;let v=new THREE.Vector3(0,.2,1);if(dir==="back")v.set(0,.2,-1);if(dir==="left")v.set(1,.2,0);controls.target.copy(center);camera.position.copy(center.clone().add(v.normalize().multiplyScalar(distance)));controls.minDistance=.035;controls.maxDistance=12;controls.update();$("viewLabel").textContent=full?"CUERPO COMPLETO · ÓRGANOS":group().name.toUpperCase()+" · VISTA 3D";applyExplode()}
+function renderGroups(){$("groups").innerHTML="";for(const g of groupDefs){const b=document.createElement("button");b.type="button";b.className="groupbtn"+(g.id===groupId?" active":"");const a=document.createElement("span");a.textContent=g.icon+" "+g.name;const c=document.createElement("small");c.textContent=modelLoaded?meshes.filter(m=>g.re.test(modelName(m))).length+" piezas":"3D";b.append(a,c);b.addEventListener("click",()=>chooseGroup(g.id));$("groups").appendChild(b)}}
+function restoreSelection(){if(selected){selected.material=selected.userData.baseMaterial;selected=null}}
+function resetIsolation(){isolated=null;hidden.clear()}
+function chooseGroup(id){if(!modelLoaded){groupId=id;renderGroups();return}resetPositions();restoreSelection();resetIsolation();groupId=id;active=meshes.filter(m=>group().re.test(modelName(m)));groupBox=boxFor(active);$("viewTitle").textContent=group().name+" · Anatomía 3D";$("partType").textContent="REGIÓN SELECCIONADA";$("partName").textContent=group().name;$("partDescription").textContent=group().description;$("detailTitle").textContent="Seleccioná una estructura";$("detailText").textContent="Tocá una pieza en el visor o elegila en la lista para conocer su función.";$("rawName").textContent="";$("search").value="";$("focusPart").disabled=$("isolatePart").disabled=$("hidePart").disabled=true;$("explode").value=0;explode=0;$("explodeValue").textContent="0%";renderGroups();applyVisibility();updateCut();renderParts();setCamera("front");$("count").textContent=active.length+" PIEZAS";setStatus("3D ACTIVO")}
+function applyVisibility(){if(!modelLoaded)return;const selectedSet=new Set(active);for(const m of meshes){const inGroup=selectedSet.has(m);m.visible=!hidden.has(m)&&(!isolated?inGroup||context:m===isolated);const alpha=inGroup?opacity:(context?.11:1);const mat=m.userData.baseMaterial;mat.opacity=alpha;mat.transparent=alpha<.995;mat.depthWrite=alpha>.9;mat.side=THREE.DoubleSide;m.renderOrder=alpha<.995?3:0;if(m!==selected)m.material=mat}if(selected){selected.material=selected.userData.highlightMaterial;selected.material.opacity=opacity;selected.material.transparent=opacity<.995;selected.material.depthWrite=opacity>.9}if(isolated){for(const m of meshes)m.visible=m===isolated&&!hidden.has(m)}}
+function applyExplode(){if(!modelLoaded)return;resetPositions();if(!explode)return;const center=worldCenter(groupBox);const radius=Math.max(groupBox.getSize(new THREE.Vector3()).length(),.2);for(const m of active){const b=new THREE.Box3().setFromObject(m),c=worldCenter(b);const d=c.sub(center);if(d.length()<.0001)d.set(.3,.4,.2);d.normalize().multiplyScalar(radius*.19*explode);m.position.copy(m.userData.basePosition).add(d)}}
+function updateCut(){clipEnabled=$("cut").checked;axis=$("axis").value;const normal=axis==="x"?new THREE.Vector3(1,0,0):axis==="y"?new THREE.Vector3(0,1,0):new THREE.Vector3(0,0,1);clipPlane.normal.copy(normal);const b=isolated?boxFor([isolated]):groupBox;const low=axis==="x"?b.min.x:axis==="y"?b.min.y:b.min.z;const high=axis==="x"?b.max.x:axis==="y"?b.max.y:b.max.z;const percent=Number($("depth").value)/100;clipPlane.constant=-(low+(high-low)*percent);renderer.clippingPlanes=clipEnabled?[clipPlane]:[];$("depthValue").textContent=$("depth").value+"%"}
+function renderParts(){const target=$("parts");target.innerHTML="";if(!modelLoaded)return;const q=$("search").value.toLowerCase().trim();const arr=active.filter(m=>modelName(m).toLowerCase().includes(q)||labelName(m).toLowerCase().includes(q)).slice(0,90);if(!arr.length){const p=document.createElement("p");p.textContent="No se encontraron piezas en esta región.";target.appendChild(p);return}for(const m of arr){const b=document.createElement("button");b.type="button";b.className="part"+(m===selected?" active":"");const title=document.createElement("span");title.textContent=labelName(m);const side=document.createElement("small");side.textContent=modelName(m).match(/\.l$/i)?"Izq.":modelName(m).match(/\.r$/i)?"Der.":"";b.append(title,side);b.addEventListener("click",()=>selectPart(m));target.appendChild(b)}}
+function selectPart(m){if(!m)return;restoreSelection();if(!active.includes(m)){const match=groupDefs.find(g=>g.id!=="all"&&g.re.test(modelName(m)));chooseGroup(match?.id||"all")}selected=m;selected.material=selected.userData.highlightMaterial;applyVisibility();const raw=modelName(m),[name,desc]=glossaryFor(raw);$("partType").textContent="ESTRUCTURA SELECCIONADA";$("partName").textContent=name;$("partDescription").textContent=desc;$("detailTitle").textContent=name;$("detailText").textContent=desc;$("rawName").textContent="Nombre anatómico original: "+raw;for(const id of ["focusPart","isolatePart","hidePart"])$(id).disabled=false;renderParts()}
+function focusPart(){if(!selected)return;const b=boxFor([selected]),center=worldCenter(b),size=b.getSize(new THREE.Vector3());const dist=Math.max(.12,size.length()*2.8);const dir=camera.position.clone().sub(controls.target).normalize();controls.target.copy(center);camera.position.copy(center.clone().addScaledVector(dir,dist));controls.update();$("viewLabel").textContent="ESTRUCTURA AISLADA · "+labelName(selected).toUpperCase()}
+function isolatePart(){if(!selected)return;isolated=selected;applyVisibility();updateCut();focusPart();$("count").textContent="1 PIEZA AISLADA";setStatus("PIEZA AISLADA")}
+function hidePart(){if(!selected)return;hidden.add(selected);restoreSelection();isolated=null;applyVisibility();renderParts();$("partName").textContent=group().name;$("partType").textContent="REGIÓN SELECCIONADA";$("detailTitle").textContent="Pieza ocultada";$("detailText").textContent="Podés recuperarla con «Mostrar todo».";for(const id of ["focusPart","isolatePart","hidePart"])$(id).disabled=true;setStatus("PIEZA OCULTADA")}
+function restoreAll(){resetIsolation();restoreSelection();applyVisibility();updateCut();renderParts();$("partName").textContent=group().name;$("partType").textContent="REGIÓN SELECCIONADA";$("detailTitle").textContent="Todas las piezas visibles";$("detailText").textContent="Seleccioná una estructura para continuar.";for(const id of ["focusPart","isolatePart","hidePart"])$(id).disabled=true;$("count").textContent=active.length+" PIEZAS";setStatus("3D ACTIVO")}
+function resetTools(){$("context").checked=false;context=false;$("opacity").value=100;opacity=1;$("opacityValue").textContent="100%";$("explode").value=0;explode=0;$("explodeValue").textContent="0%";$("cut").checked=false;$("axis").value="x";$("depth").value=50;resetPositions();restoreAll();setCamera("front")}
+function setup(){
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:!matchMedia("(max-width:760px)").matches,alpha:true,powerPreference:"high-performance"});renderer.setPixelRatio(Math.min(devicePixelRatio||1,matchMedia("(max-width:760px)").matches?1.5:2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.45;renderer.localClippingEnabled=true;scene=new THREE.Scene();scene.add(new THREE.HemisphereLight(0xe6f4ff,0x362b3a,1.9));const key=new THREE.DirectionalLight(0xffede4,2.5);key.position.set(3,5,4);scene.add(key);const fill=new THREE.DirectionalLight(0x96c9ff,1.3);fill.position.set(-3,2,-4);scene.add(fill);camera=new THREE.PerspectiveCamera(35,1,.01,60);camera.position.set(0,1,3.5);controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,.9,0);root=new THREE.Group();scene.add(root);raycaster=new THREE.Raycaster();loader=new GLTFLoader();const draco=new DRACOLoader();draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/libs/draco/");loader.setDRACOLoader(draco);function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();let down=null;canvas.addEventListener("pointerdown",e=>{down={x:e.clientX,y:e.clientY}});canvas.addEventListener("pointerup",e=>{if(!modelLoaded||!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>6)return;const rect=canvas.getBoundingClientRect();raycaster.setFromCamera(new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1),camera);const hits=raycaster.intersectObjects(active.filter(m=>m.visible),false);if(hits.length)selectPart(hits[0].object)});
+}catch(e){showMessage("No se pudo iniciar WebGL",String(e.message||e));setStatus("WEBGL NO DISPONIBLE");return false}return true
+}
+function loadModel(){let attempt=0;function next(){if(attempt>=modelUrls.length){showMessage("No se pudo cargar el modelo","Probá actualizar la página o revisar tu conexión. La V5 continúa disponible.");setStatus("ERROR DE DESCARGA");return}const url=modelUrls[attempt++];loader.load(url,gltf=>{const group3d=gltf.scene;const matCache=new Map();group3d.traverse(m=>{if(!m.isMesh)return;const meta=Object.keys(m.userData).length?m.userData:m.parent?.userData||{};const raw=String(meta.zname||m.name||"Estructura");const color=colorFor(raw);const cacheKey=color;if(!matCache.has(cacheKey))matCache.set(cacheKey,new THREE.MeshStandardMaterial({color,roughness:.66,metalness:.015,side:THREE.DoubleSide}));m.material=matCache.get(cacheKey).clone();m.userData.nameOriginal=raw;m.userData.baseMaterial=m.material;m.userData.highlightMaterial=m.material.clone();m.userData.highlightMaterial.emissive=new THREE.Color("#3fc0c4");m.userData.highlightMaterial.emissiveIntensity=.55;m.userData.basePosition=m.position.clone();meshes.push(m)});root.add(group3d);bodyBox=new THREE.Box3().setFromObject(group3d);const center=worldCenter(bodyBox);root.position.set(-center.x,-bodyBox.min.y,-center.z);bodyHeight=Math.max(.6,bodyBox.getSize(new THREE.Vector3()).y);bodyBox=new THREE.Box3().setFromObject(group3d);modelLoaded=true;$("loading").hidden=true;chooseGroup(groupId);$("statusBadge").textContent="3D ACTIVO";if(initialQuery){const term=initialQuery.toLowerCase();const m=meshes.find(x=>modelName(x).toLowerCase()===term)||meshes.find(x=>modelName(x).toLowerCase().includes(term));if(m){const g=groupDefs.find(g=>g.id!=="all"&&g.re.test(modelName(m)));chooseGroup(g?.id||"all");selectPart(m);focusPart()}}},xhr=>{if(xhr.lengthComputable){const pct=Math.min(100,Math.round(xhr.loaded/xhr.total*100));$("progress").style.width=pct+"%";showMessage("Descargando órganos 3D",pct+"% completado")}},()=>next())}next()}
+for(const g of groupDefs){const b=document.createElement("button");b.type="button";b.className="groupbtn";b.textContent=g.icon+" "+g.name;b.addEventListener("click",()=>chooseGroup(g.id));$("groups").appendChild(b)}
+$("context").addEventListener("change",e=>{context=e.target.checked;applyVisibility()});
+$("opacity").addEventListener("input",e=>{opacity=Number(e.target.value)/100;$("opacityValue").textContent=e.target.value+"%";applyVisibility()});
+$("explode").addEventListener("input",e=>{explode=Number(e.target.value)/100;$("explodeValue").textContent=e.target.value+"%";applyExplode();updateCut()});
+$("cut").addEventListener("change",updateCut);$("axis").addEventListener("change",updateCut);$("depth").addEventListener("input",updateCut);
+$("resetTools").addEventListener("click",resetTools);$("isolateGroup").addEventListener("click",()=>{context=false;$("context").checked=false;restoreAll();setCamera("front")});
+$("search").addEventListener("input",renderParts);$("focusPart").addEventListener("click",focusPart);$("isolatePart").addEventListener("click",isolatePart);$("hidePart").addEventListener("click",hidePart);$("restorePart").addEventListener("click",restoreAll);
+$("front").addEventListener("click",()=>setCamera("front"));$("back").addEventListener("click",()=>setCamera("back"));$("left").addEventListener("click",()=>setCamera("left"));$("fit").addEventListener("click",()=>setCamera("front"));$("all").addEventListener("click",()=>setCamera("front",true));
+renderGroups();if(setup())loadModel();
+</script>
+</body>
+</html>
