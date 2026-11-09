@@ -454,6 +454,16 @@ $("resetDissection").addEventListener("click",resetDissection);
 $("quizNext").addEventListener("click",()=>{quizIndex=(quizIndex+1)%HEAD_QUIZ.length;renderQuiz()});
 $("quizShow").addEventListener("click",showQuizStructure);
 renderQuiz();
+// V11: controles de corte, fichas y favoritos
+for(const p of SECTION_PRESETS)$(p.id).addEventListener("click",()=>applySection(p.id));
+$("sectionDepth").addEventListener("input",e=>{
+const n=Number(e.target.value);$("sectionPct").textContent=n+"%";
+if(activeSection){$("depthA").value=n;updateClips()}
+});
+$("sectionReset").addEventListener("click",resetSection);
+$("favoriteToggle").addEventListener("click",toggleFavorite);
+loadFavorites();updateDetailCard();
+
 
 $("saveImage").addEventListener("click",saveImage);
 $("tourNext").addEventListener("click",()=>{headTourIndex=(headTourIndex+1)%HEAD_TOUR.length;runHeadTour()});
