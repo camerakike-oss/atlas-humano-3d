@@ -209,7 +209,7 @@ body{background:radial-gradient(ellipse at 38% -15%,#254b5366,transparent 42%),l
 <div class="overlay"><div class="label" id="viewLabel">VISTA ANTERIOR · MODELO EDUCATIVO</div><div class="label" id="countLabel">0 ESTRUCTURAS</div></div><div id="pin3d" class="pin3d" hidden></div><div id="multiLabels" class="multiLabels" aria-label="Etiquetas anatómicas interactivas"></div>
 <div class="loading" id="loading"><div class="glyph">🧬</div><h3 id="loadTitle">Preparando anatomía real</h3><p id="loadText">Estamos cargando el esqueleto 3D. Después podrás agregar músculos, órganos y otros sistemas.</p><div class="loadbar"><span id="progress"></span></div><a href="cuerpo.html">Abrir la V4 mientras tanto</a></div>
 </div>
-<div class="stagefoot"><button id="exteriorView" type="button" class="accentBtn">◉ Vista general</button><button id="muscleView" type="button">🧠 Encéfalo</button><button id="spinToggle" type="button" aria-pressed="false">↻ Giro automático</button><button id="front" type="button">Frente</button><button id="back" type="button">Espalda</button><button id="side" type="button">Perfil</button><button id="resetCamera" type="button">Centrar</button><button id="resetAll" type="button">Restablecer todo</button><button id="saveImage" type="button">📷 Guardar PNG</button><label><input type="checkbox" id="pinEnabled" checked> Etiqueta seleccionada</label><label><input type="checkbox" id="multiLabelsEnabled" checked> Etiquetas múltiples</label></div><div class="headGuide"><strong>Neuroatlas:</strong> cada región resalta piezas anatómicas disponibles. Los lóbulos y las funciones cerebrales son más complejos que cualquier modelo simplificado; esto no representa un mapa funcional individual ni sirve para diagnóstico.</div><div class="neuroCutbar"><div class="smalltitle">Vistas rápidas del encéfalo</div><div class="neuroCutButtons"><button type="button" id="neuroFront">Frontal</button><button type="button" id="neuroSide">Lateral</button><button type="button" id="neuroTop">Superior</button><button type="button" id="neuroMid">Corte sagital</button><button type="button" id="neuroReset">Quitar corte</button></div></div><div class="cutbar"><h3>Cortes geométricos combinados</h3><p>Activá uno o dos planos para retirar visualmente parte de la anatomía. No reconstruye tejidos internos no modelados.</p><div class="cuts"><div class="cutitem"><label><input id="clipA" type="checkbox"> Plano A</label><select id="axisA" aria-label="Eje del plano A"><option value="x">Sagital</option><option value="y">Horizontal</option><option value="z">Frontal</option></select><input id="depthA" type="range" min="2" max="98" value="50" aria-label="Profundidad del plano A"><output id="pctA">50%</output></div><div class="cutitem"><label><input id="clipB" type="checkbox"> Plano B</label><select id="axisB" aria-label="Eje del plano B"><option value="y">Horizontal</option><option value="x">Sagital</option><option value="z">Frontal</option></select><input id="depthB" type="range" min="2" max="98" value="50" aria-label="Profundidad del plano B"><output id="pctB">50%</output></div></div></div>
+<div class="stagefoot"><button id="exteriorView" type="button" class="accentBtn">🧠 Encéfalo completo</button><button id="muscleView" type="button">👁️ Vía visual</button><button id="spinToggle" type="button" aria-pressed="false">↻ Giro automático</button><button id="front" type="button">Frente</button><button id="back" type="button">Espalda</button><button id="side" type="button">Perfil</button><button id="resetCamera" type="button">Centrar</button><button id="resetAll" type="button">Restablecer todo</button><button id="saveImage" type="button">📷 Guardar PNG</button><label><input type="checkbox" id="pinEnabled" checked> Etiqueta seleccionada</label><label><input type="checkbox" id="multiLabelsEnabled" checked> Etiquetas múltiples</label></div><div class="headGuide"><strong>Neuroatlas:</strong> cada región resalta piezas anatómicas disponibles. Los lóbulos y las funciones cerebrales son más complejos que cualquier modelo simplificado; esto no representa un mapa funcional individual ni sirve para diagnóstico.</div><div class="neuroCutbar"><div class="smalltitle">Vistas rápidas del encéfalo</div><div class="neuroCutButtons"><button type="button" id="neuroFront">Frontal</button><button type="button" id="neuroSide">Lateral</button><button type="button" id="neuroTop">Superior</button><button type="button" id="neuroMid">Corte sagital</button><button type="button" id="neuroReset">Quitar corte</button></div></div><div class="cutbar"><h3>Cortes geométricos combinados</h3><p>Activá uno o dos planos para retirar visualmente parte de la anatomía. No reconstruye tejidos internos no modelados.</p><div class="cuts"><div class="cutitem"><label><input id="clipA" type="checkbox"> Plano A</label><select id="axisA" aria-label="Eje del plano A"><option value="x">Sagital</option><option value="y">Horizontal</option><option value="z">Frontal</option></select><input id="depthA" type="range" min="2" max="98" value="50" aria-label="Profundidad del plano A"><output id="pctA">50%</output></div><div class="cutitem"><label><input id="clipB" type="checkbox"> Plano B</label><select id="axisB" aria-label="Eje del plano B"><option value="y">Horizontal</option><option value="x">Sagital</option><option value="z">Frontal</option></select><input id="depthB" type="range" min="2" max="98" value="50" aria-label="Profundidad del plano B"><output id="pctB">50%</output></div></div></div>
 <div class="regionbox headFooter"><div class="smalltitle">Exploración detallada</div><p>Los cortes muestran la geometría disponible. Algunas estructuras microscópicas no están representadas en el modelo.</p><p>Para estudiar la cóclea y los canales semicirculares, podés abrir el modelo independiente de oído interno en el módulo Cabeza original.</p><a href="index.html#cabeza">↗ Ver otros modelos de cabeza y oído</a> · <a href="atlas-visual.html">Volver al cuerpo V8</a></div>
 </section>
 <aside class="panel right">
@@ -501,8 +501,20 @@ $("dissectNext").addEventListener("click",()=>{++sectionSequence;resetSectionUI(
 $("explodeLayers").addEventListener("input",e=>setExplode(e.target.value));
 $("resetDissection").addEventListener("click",resetDissection);
 $("quizNext").addEventListener("click",()=>{quizIndex=(quizIndex+1)%HEAD_QUIZ.length;renderQuiz()});
-$("quizShow").addEventListener("click",showQuizStructure);
+$("quizShow").addEventListener("click",showNeuroQuizStructure);
 renderQuiz();
+// Neuroatlas V12 — hemisferios, contexto y vistas
+for(const b of document.querySelectorAll("#sideButtons button"))b.addEventListener("click",()=>{
+neuroHemisphere=b.dataset.side;neuroTourIndex=-1;selectNeuroZone(neuroZoneId);
+});
+$("neuroContext").addEventListener("change",e=>{
+neuroContext=e.target.checked;selectNeuroZone(neuroZoneId);
+});
+$("neuroFront").addEventListener("click",()=>quickNeuroView("Frente"));
+$("neuroSide").addEventListener("click",()=>quickNeuroView("Perfil"));
+$("neuroTop").addEventListener("click",()=>quickNeuroView("Superior"));
+$("neuroMid").addEventListener("click",neuroSagittalCut);
+$("neuroReset").addEventListener("click",()=>quickNeuroView("Frente"));
 // V11: controles de corte, fichas y favoritos
 for(const p of SECTION_PRESETS)$(p.id).addEventListener("click",()=>applySection(p.id));
 $("sectionDepth").addEventListener("input",e=>{
@@ -515,9 +527,9 @@ loadFavorites();updateDetailCard();
 
 
 $("saveImage").addEventListener("click",saveImage);
-$("tourNext").addEventListener("click",()=>{headTourIndex=(headTourIndex+1)%HEAD_TOUR.length;runHeadTour()});
-$("tourPrev").addEventListener("click",()=>{headTourIndex=headTourIndex<=0?0:headTourIndex-1;runHeadTour()});
-$("tourExit").addEventListener("click",()=>{headTourIndex=-1;headTourToken++;$("tourCount").textContent="RECORRIDO FINALIZADO";$("tourText").textContent="Podés explorar libremente cualquier estructura de la cabeza.";});
+$("tourNext").addEventListener("click",()=>{neuroTourIndex=(neuroTourIndex+1)%NEURO_TOUR.length;runNeuroTour()});
+$("tourPrev").addEventListener("click",()=>{neuroTourIndex=neuroTourIndex<=0?0:neuroTourIndex-1;runNeuroTour()});
+$("tourExit").addEventListener("click",()=>{neuroTourIndex=-1;neuroTourToken++;$("tourCount").textContent="RECORRIDO FINALIZADO";$("tourText").textContent="Podés explorar cualquier región cerebral libremente.";});
 organUI();
 
 
@@ -890,12 +902,12 @@ for(const c of config){const s=state[c.key];const item=document.createElement("d
 for(const [key,label] of Object.entries({exterior:"Piel realista",musclesSolo:"Solo músculos",bones:"Solo huesos",muscle:"Músculos + huesos",organs:"Órganos + huesos",skin:"Piel transparente",vessels:"Circulación",all:"Todas las capas"})){const b=document.createElement("button");b.className="preset";b.dataset.preset=key;b.textContent=label;b.addEventListener("click",()=>setPreset(key));$("presets").appendChild(b)}
 
 $("front").addEventListener("click",()=>{if(!organMode)setCamera("Frente")});$("back").addEventListener("click",()=>{if(!organMode)setCamera("Espalda")});$("side").addEventListener("click",()=>{if(!organMode)setCamera("Perfil")});$("resetCamera").addEventListener("click",()=>{if(!organMode)setCamera("Frente")});
-$("resetAll").addEventListener("click",()=>{restoreAll();setPreset("bones");setCamera("Frente")});
+$("resetAll").addEventListener("click",()=>{neuroHemisphere="both";neuroContext=false;$("neuroContext").checked=false;$("clipA").checked=false;$("clipB").checked=false;selectNeuroZone("brain")});
 $("isolate").addEventListener("click",isolatePart);$("hidePart").addEventListener("click",hidePart);$("focus").addEventListener("click",focusPart);$("restore").addEventListener("click",restoreAll);$("search").addEventListener("input",refreshResults);
 $("visualStyle").addEventListener("change",applyVisualStyle);
 $("renderQuality").addEventListener("change",applyRenderQuality);
-$("exteriorView").addEventListener("click",()=>setPreset("exterior"));
-$("muscleView").addEventListener("click",()=>setPreset("musclesSolo"));
+$("exteriorView").addEventListener("click",()=>selectNeuroZone("brain"));
+$("muscleView").addEventListener("click",()=>selectNeuroZone("vision"));
 $("spinToggle").addEventListener("click",()=>{
 if(!controls)return;controls.autoRotate=!controls.autoRotate;controls.autoRotateSpeed=.65;
 $("spinToggle").setAttribute("aria-pressed",String(controls.autoRotate));
@@ -904,9 +916,9 @@ $("spinToggle").textContent=controls.autoRotate?"■ Detener giro":"↻ Giro aut
 updateLayerUI();refreshResults();
 if(initialize()){
 loadLayer("skeleton").then(async()=>{
-if(!allMeshes.length){setStatus("No se pudo cargar el esqueleto. Probá actualizar o abrir la V8.");return}
+if(!allMeshes.length){setStatus("No se pudo preparar la escena. Probá actualizar o abrir la V11.");return}
 $("loading").hidden=true;
-if(headRequest===0)await applyDissection(0);
+if(neuroRequest===0)await selectNeuroZone("brain");
 });
 }
 </script>
