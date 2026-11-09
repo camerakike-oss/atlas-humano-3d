@@ -524,7 +524,8 @@ else setStatus("La pieza guardada no está disponible en el modelo cargado.")
 function resetSectionUI(){
 activeSection=null;
 for(const b of document.querySelectorAll(".sectionButtons button"))b.classList.remove("active");
-$("sectionExplanation").textContent="Elegí un plano para ver la anatomía desde otra perspectiva."
+$("sectionExplanation").textContent="Elegí un plano para ver la anatomía desde otra perspectiva.";
+$("clipA").checked=false;$("clipB").checked=false;updateClips()
 }
 async function applySection(id){
 const p=SECTION_PRESETS.find(x=>x.id===id);if(!p)return;
