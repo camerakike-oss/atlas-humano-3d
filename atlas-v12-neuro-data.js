@@ -52,3 +52,86 @@ if(!zone||!zone.layers.includes(layer)||!zone.re.test(raw))return false;
 const part=neuroSide(raw);
 return side==="both"||part===side||part==="midline";
 }
+
+// Traducciones descriptivas para las mallas cerebrales más frecuentes.
+const NEURO_NAMES=[
+[/^inferior frontal sulcus/i,"Surco frontal inferior"],
+[/^middle frontal gyrus/i,"Giro frontal medio"],
+[/^superior frontal gyrus/i,"Giro frontal superior"],
+[/^superior frontal sulcus/i,"Surco frontal superior"],
+[/^precentral sulcus/i,"Surco precentral"],
+[/^postcentral sulcus/i,"Surco poscentral"],
+[/^orbital gyri/i,"Giros orbitarios"],
+[/^orbital sulci/i,"Surcos orbitarios"],
+[/^straight gyrus/i,"Giro recto"],
+[/^paracentral gyrus/i,"Giro paracentral"],
+[/^paracentral sulcus/i,"Surco paracentral"],
+[/^triangular part of inferior frontal gyrus/i,"Porción triangular del giro frontal inferior"],
+[/^opercular part of inferior frontal gyrus/i,"Porción opercular del giro frontal inferior"],
+[/^angular gyrus/i,"Giro angular"],
+[/^supramarginal gyrus/i,"Giro supramarginal"],
+[/^intraparietal sulcus/i,"Surco intraparietal"],
+[/^superior parietal lobule/i,"Lobulillo parietal superior"],
+[/^precuneus/i,"Precúneo"],
+[/^subparietal sulcus/i,"Surco subparietal"],
+[/^superior temporal gyrus/i,"Giro temporal superior"],
+[/^middle temporal gyrus/i,"Giro temporal medio"],
+[/^inferior temporal gyrus/i,"Giro temporal inferior"],
+[/^superior temporal sulcus/i,"Surco temporal superior"],
+[/^inferior temporal sulcus/i,"Surco temporal inferior"],
+[/^transverse temporal gyri/i,"Giros temporales transversos"],
+[/^temporal plane/i,"Plano temporal"],
+[/^temporal pole/i,"Polo temporal"],
+[/^calcarine sulcus/i,"Surco calcarino"],
+[/^cuneus/i,"Cuña"],
+[/^lingual gyrus/i,"Giro lingual"],
+[/^lunate sulcus/i,"Surco lunado"],
+[/^occipital pole/i,"Polo occipital"],
+[/^superior occipital gyri/i,"Giros occipitales superiores"],
+[/^lateral occipital gyrus/i,"Giro occipital lateral"],
+[/^circular sulcus of insula/i,"Surco circular de la ínsula"],
+[/^insula/i,"Ínsula"],
+[/^cingulate gyrus/i,"Giro cingulado"],
+[/^cingulate sulcus/i,"Surco cingulado"],
+[/^corpus callosum/i,"Cuerpo calloso"],
+[/^anterior quadrangular lobule/i,"Lobulillo cuadrangular anterior"],
+[/^posterior quadrangular lobule/i,"Lobulillo cuadrangular posterior"],
+[/^superior semilunar lobule/i,"Lobulillo semilunar superior"],
+[/^inferior semilunar lobule/i,"Lobulillo semilunar inferior"],
+[/^biventral lobule/i,"Lobulillo biventre"],
+[/^flocculus/i,"Flóculo cerebeloso"],
+[/^culmen/i,"Culmen cerebeloso"],
+[/^declive/i,"Declive cerebeloso"],
+[/^tonsil of cerebellum/i,"Amígdala cerebelosa"],
+[/^superior cerebellar peduncle/i,"Pedúnculo cerebeloso superior"],
+[/^midbrain/i,"Mesencéfalo"],
+[/^base of peduncle/i,"Base del pedúnculo cerebral"],
+[/^medulla oblongata/i,"Bulbo raquídeo"],
+[/^pons/i,"Puente troncoencefálico"],
+[/^adenohypophysis/i,"Adenohipófisis"],
+[/^neurohypophysis/i,"Neurohipófisis"],
+[/^optic chiasm/i,"Quiasma óptico"],
+[/^optic tract/i,"Tracto óptico"],
+[/^optic nerve/i,"Nervio óptico"],
+[/^vertebral artery/i,"Arteria vertebral"],
+[/^basilar artery/i,"Arteria basilar"],
+[/^anterior cerebral artery/i,"Arteria cerebral anterior"],
+[/^middle cerebral artery/i,"Arteria cerebral media"],
+[/^posterior cerebral artery/i,"Arteria cerebral posterior"],
+[/^anterior communicating artery/i,"Arteria comunicante anterior"],
+[/^posterior communicating artery/i,"Arteria comunicante posterior"],
+[/^superior sagittal sinus/i,"Seno sagital superior"],
+[/^cavernous sinus/i,"Seno cavernoso"],
+[/^vestibulocochlear nerve/i,"Nervio vestibulococlear"],
+[/^malleus/i,"Martillo"],
+[/^incus/i,"Yunque"],
+[/^stapes/i,"Estribo"]
+];
+export function neuroLabel(raw){
+const name=String(raw||"").trim();
+for(const [re,es] of NEURO_NAMES)if(re.test(name)){
+const side=neuroSide(name);
+return es+(side==="left"?" (izquierda)":side==="right"?" (derecha)":"");
+}
+return null;
+}
