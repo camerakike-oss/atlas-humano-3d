@@ -367,7 +367,7 @@ const light=new THREE.DirectionalLight(0xffeddf,3.1);light.position.set(3.2,5.2,
 const fill=new THREE.DirectionalLight(0xb9d7e7,1.25);fill.position.set(-4.2,2.1,2.5);scene.add(fill);
 const rim=new THREE.DirectionalLight(0x9adbe3,1.85);rim.position.set(-2.8,3.6,-4.2);scene.add(rim);
 const bounce=new THREE.DirectionalLight(0xffd3bd,.6);bounce.position.set(2,-1,-2);scene.add(bounce);
-camera=new THREE.PerspectiveCamera(34,1,.01,70);camera.position.set(0,1.1,3.4);
+camera=new THREE.PerspectiveCamera(34,1,.01,70);camera.position.set(0,1.1,3.4);compareCamera=new THREE.PerspectiveCamera(34,1,.01,70);
 controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.075;controls.minDistance=.16;controls.maxDistance=12;controls.target.set(0,.9,0);
 root=new THREE.Group();scene.add(root);raycaster=new THREE.Raycaster();clock=new THREE.Clock();
 const shadowCanvas=document.createElement("canvas");shadowCanvas.width=128;shadowCanvas.height=128;
@@ -381,9 +381,21 @@ ring.rotation.x=-Math.PI/2;ring.position.y=-.03;scene.add(ring);
 loader=new GLTFLoader();const draco=new DRACOLoader();draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/libs/draco/");loader.setDRACOLoader(draco);
 function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(wrap);resize();
-function frame(){requestAnimationFrame(frame);controls.update();renderer.render(scene,camera);updatePin();if((++labelTick%3)===0)updateMultiLabels()}frame();
+function frame(){requestAnimationFrame(frame);controls.update();if(compareMode)renderComparison();else renderer.render(scene,camera);updatePin();if((++labelTick%3)===0)updateMultiLabels()}frame();
 canvas.addEventListener("pointerdown",e=>{canvas.dataset.downX=e.clientX;canvas.dataset.downY=e.clientY});
-canvas.addEventListener("pointerup",e=>{if(Math.hypot(e.clientX-Number(canvas.dataset.downX||e.clientX),e.clientY-Number(canvas.dataset.downY||e.clientY))>6)return;const r=canvas.getBoundingClientRect();const xy=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);raycaster.setFromCamera(xy,camera);const hits=raycaster.intersectObjects(allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible&&(!neuroMode||neuroMatches(neuroZone(),m.userData.atlasLayer,m.userData.atlasName,neuroHemisphere))),false);if(hits.length)choosePart(hits[0].object)});
+canvas.addEventListener("pointerup",e=>{if(Math.hypot(e.clientX-Number(canvas.dataset.downX||e.clientX),e.clientY-Number(canvas.dataset.downY||e.clientY))>6)return;const r=canvas.getBoundingClientRect();let hits;
+if(compareMode){
+const x=(e.clientX-r.left)/r.width,side=x<.5?"left":"right";
+setupCompareCamera(side);
+const xy=new THREE.Vector2(((x<.5?x:x-.5)*4)-1,-(e.clientY-r.top)/r.height*2+1);
+raycaster.setFromCamera(xy,compareCamera);
+hits=raycaster.intersectObjects(compareVisibleMeshes().filter(m=>neuroSide(m.userData.atlasName)===side||neuroSide(m.userData.atlasName)==="midline"),false);
+}else{
+const xy=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+raycaster.setFromCamera(xy,camera);
+hits=raycaster.intersectObjects(allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible&&(!neuroMode||neuroMatches(neuroZone(),m.userData.atlasLayer,m.userData.atlasName,neuroHemisphere))),false);
+}
+if(hits.length)choosePart(hits[0].object)});
 window.addEventListener("keydown",e=>{if(e.key==="Escape"&&isolateSnapshot)restoreIsolation()});
 }catch(e){updateLoading("No se pudo iniciar WebGL",String(e.message||e),0);setStatus("El visor 3D requiere WebGL. La V4 continúa disponible.");return false}
 return true
@@ -461,8 +473,8 @@ o.material=materialCache.get(cacheKey);o.userData.atlasName=raw;o.userData.atlas
 root.add(group);applyExplodeLayers();s.loaded=true;s.loading=false;s.failed=false;loadingCount--;frameBody(group);applyLayer(key);countLoaded();updateLayerUI();$("loading").hidden=true;setStatus("Cargadas "+allMeshes.length+" piezas reales. Seleccioná una estructura para explorarla.");refreshResults();refreshMultiLabels();resolve();
 },xhr=>{if(!allMeshes.length&&xhr.lengthComputable)updateLoading("Descargando "+names[key],Math.round(xhr.loaded/xhr.total*100)+"% de la capa "+names[key],Math.min(100,Math.round(xhr.loaded/xhr.total*100)))},()=>next())}
 next()});return s.pending}
-function clearSelection(){if(selected&&selectedOriginal){selected.material=selectedOriginal}selected=null;selectedOriginal=null;selectedMaterial=null;$("selectedLayer").textContent="SIN SELECCIÓN";$("selectedName").textContent="Tocá una estructura";$("selectedDesc").textContent="Seleccioná una parte del cuerpo para consultar su nombre, aislarla o acercarte.";$("infoTitle").textContent="Exploración por capas";$("infoText").textContent="Podés activar varios sistemas simultáneamente y ajustar su transparencia.";for(const id of ["isolate","hidePart","focus"])$(id).disabled=true;$("organLab").hidden=true;$("pin3d").hidden=true;updateDetailCard()}
-function choosePart(mesh){if(isolateSnapshot)restoreIsolation();if(selected&&selectedOriginal)selected.material=selectedOriginal;selected=mesh;selectedOriginal=mesh.material;selectedMaterial=selectedOriginal.clone();selectedMaterial.emissive=new THREE.Color("#39b9bc");selectedMaterial.emissiveIntensity=.2;mesh.material=selectedMaterial;const raw=mesh.userData.atlasName,key=mesh.userData.atlasLayer;$("selectedLayer").textContent=names[key].toUpperCase();$("selectedName").textContent=headInfo(raw)?.label||neuroLabel(raw)||mesh.userData.atlasLabel;$("selectedDesc").textContent=description(raw,key);$("infoTitle").textContent="Nombre original: "+raw;$("infoText").textContent="Podés aislar esta pieza, acercarla y aplicar cortes geométricos para examinar su forma. El nombre anatómico original se conserva arriba.";for(const id of ["isolate","hidePart","focus"])$(id).disabled=false;updateMultiLabels();const lab=$("organLab");lab.hidden=key!=="organs";if(key==="organs")lab.href="organos.html?pieza="+encodeURIComponent(raw);updateDetailCard()}
+function clearSelection(){clearComparePeer();if(selected&&selectedOriginal){selected.material=selectedOriginal}selected=null;selectedOriginal=null;selectedMaterial=null;$("selectedLayer").textContent="SIN SELECCIÓN";$("selectedName").textContent="Tocá una estructura";$("selectedDesc").textContent="Seleccioná una parte del cuerpo para consultar su nombre, aislarla o acercarte.";$("infoTitle").textContent="Exploración por capas";$("infoText").textContent="Podés activar varios sistemas simultáneamente y ajustar su transparencia.";for(const id of ["isolate","hidePart","focus"])$(id).disabled=true;$("organLab").hidden=true;$("pin3d").hidden=true;updateDetailCard()}
+function choosePart(mesh){clearComparePeer();if(isolateSnapshot)restoreIsolation();if(selected&&selectedOriginal)selected.material=selectedOriginal;selected=mesh;selectedOriginal=mesh.material;selectedMaterial=selectedOriginal.clone();selectedMaterial.emissive=new THREE.Color("#39b9bc");selectedMaterial.emissiveIntensity=.2;mesh.material=selectedMaterial;const raw=mesh.userData.atlasName,key=mesh.userData.atlasLayer;$("selectedLayer").textContent=names[key].toUpperCase();$("selectedName").textContent=headInfo(raw)?.label||neuroLabel(raw)||mesh.userData.atlasLabel;$("selectedDesc").textContent=description(raw,key);$("infoTitle").textContent="Nombre original: "+raw;$("infoText").textContent="Podés aislar esta pieza, acercarla y aplicar cortes geométricos para examinar su forma. El nombre anatómico original se conserva arriba.";for(const id of ["isolate","hidePart","focus"])$(id).disabled=false;updateMultiLabels();const lab=$("organLab");lab.hidden=key!=="organs";if(key==="organs")lab.href="organos.html?pieza="+encodeURIComponent(raw);updateDetailCard();highlightComparePeer(mesh)}
 function restoreIsolation(){if(!isolateSnapshot)return;for(const [k,visible] of isolateSnapshot.layers)state[k].visible=visible;for(const [mesh,visible] of isolateSnapshot.meshes)mesh.visible=visible;isolateSnapshot=null;for(const c of config)applyLayer(c.key);updateLayerUI()}
 function isolatePart(){if(!selected)return;if(isolateSnapshot)restoreIsolation();isolateSnapshot={layers:config.map(c=>[c.key,state[c.key].visible]),meshes:allMeshes.map(m=>[m,m.visible])};for(const c of config){state[c.key].visible=c.key===selected.userData.atlasLayer;if(state[c.key].group)state[c.key].group.visible=state[c.key].visible}for(const m of allMeshes)m.visible=m===selected;updateLayerUI();focusPart();setStatus("Pieza aislada. Tocá «Mostrar todo» para restaurar la escena.")}
 function hidePart(){if(!selected)return;hiddenParts.add(selected.uuid);const m=selected;clearSelection();m.visible=false;setStatus("Pieza ocultada. «Mostrar todo» restaura las estructuras.")}
@@ -516,12 +528,12 @@ const axis=$("axis"+suf).value,normal=new THREE.Vector3(axis==="x"?1:0,axis==="y
 const min=box.min[axis],max=box.max[axis];clipPlanes[i].normal.copy(normal);clipPlanes[i].constant=-(min+(max-min)*Number($("depth"+suf).value)/100);planes.push(clipPlanes[i])}
 renderer.clippingPlanes=[neckPlane,...planes];
 }
-function updatePin(){const pin=$("pin3d");if(!selected||!selected.visible||!$("pinEnabled").checked||!camera||!renderer){pin.hidden=true;return}
+function updatePin(){const pin=$("pin3d");if(compareMode){pin.hidden=true;return}if(!selected||!selected.visible||!$("pinEnabled").checked||!camera||!renderer){pin.hidden=true;return}
 const box=new THREE.Box3().setFromObject(selected);if(box.isEmpty()){pin.hidden=true;return}
 const p=box.getCenter(new THREE.Vector3()).project(camera);if(p.z<-1||p.z>1||Math.abs(p.x)>1.1||Math.abs(p.y)>1.1){pin.hidden=true;return}
 pin.hidden=false;pin.textContent=selected.userData.atlasLabel;pin.style.left=((p.x+1)*50)+"%";pin.style.top=((1-p.y)*50)+"%";
 }
-function saveImage(){if(!renderer)return;try{renderer.render(scene,camera);const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="neuroatlas-v12-"+neuroZoneId+"-"+neuroHemisphere+".png";document.body.appendChild(a);a.click();a.remove();setStatus("Imagen PNG generada desde la vista actual.")}catch(e){setStatus("El navegador no permitió guardar la captura: "+e.message)}}
+function saveImage(){if(!renderer)return;try{if(compareMode)renderComparison();else renderer.render(scene,camera);const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="neuroatlas-v13-"+neuroZoneId+"-"+(compareMode?"comparacion":neuroHemisphere)+".png";document.body.appendChild(a);a.click();a.remove();setStatus("Imagen PNG generada desde la vista actual.")}catch(e){setStatus("El navegador no permitió guardar la captura: "+e.message)}}
 async function runTour(){if(tourIndex<0)return;const expected=tourIndex;const step=tourStops[tourIndex];$("tourCount").textContent="PARADA "+(tourIndex+1)+" / "+tourStops.length;$("tourText").textContent=step.title+" — "+step.text;$("tourNext").textContent=tourIndex===tourStops.length-1?"Repetir recorrido ↺":"Siguiente →";await enterOrgan(step.group);if(tourIndex!==expected||organGroup?.id!==step.group)return;const match=groupMeshes().find(m=>step.re.test(m.userData.atlasName));if(match){choosePart(match);focusPart()} }
 for(const g of organGroups){const b=document.createElement("button");b.type="button";b.className="organBtn";b.dataset.group=g.id;b.textContent=g.label;b.addEventListener("click",()=>{tourIndex=-1;enterOrgan(g.id)});$("organGrid").appendChild(b)}
 $("returnBody").addEventListener("click",()=>{tourIndex=-1;leaveOrgan()});
@@ -571,6 +583,122 @@ organUI();
 
 
 
+
+// V13 — Comparador bilateral sincronizado y cortes cerebrales
+function compareVisibleMeshes(){
+return allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible)
+}
+function compareSideMeshes(side){
+return compareVisibleMeshes().filter(m=>{const hemi=neuroSide(m.userData.atlasName);return hemi===side||hemi==="midline"})
+}
+function compareSideCounts(){
+const zone=neuroZone();
+return ["left","right"].map(side=>allMeshes.filter(m=>neuroMatches(zone,m.userData.atlasLayer,m.userData.atlasName,side)&&neuroSide(m.userData.atlasName)===side).length)
+}
+function setupCompareCamera(side){
+if(!camera||!compareCamera)return;
+const visible=compareSideMeshes(side);
+const box=new THREE.Box3();for(const m of visible)box.expandByObject(m);
+const center=box.isEmpty()?controls.target.clone():box.getCenter(new THREE.Vector3());
+const offset=camera.position.clone().sub(controls.target);
+const distance=offset.length();
+if(distance<.001)offset.set(0,0,1);
+const w=wrap.clientWidth||700,h=wrap.clientHeight||600;
+compareCamera.copy(camera);
+compareCamera.aspect=Math.max(.1,(w*.5)/h);
+compareCamera.up.copy(camera.up);
+compareCamera.position.copy(center).add(offset);
+compareCamera.lookAt(center);
+compareCamera.updateProjectionMatrix();
+compareCamera.updateMatrixWorld();
+}
+function renderComparison(){
+if(!renderer||!camera)return;
+const w=wrap.clientWidth,h=wrap.clientHeight;
+if(w<2||h<2){renderer.render(scene,camera);return}
+const visible=compareVisibleMeshes();
+const half=w/2;
+renderer.setScissorTest(true);
+try{
+for(const [i,side] of ["left","right"].entries()){
+for(const m of visible){const hemi=neuroSide(m.userData.atlasName);m.visible=hemi===side||hemi==="midline"}
+setupCompareCamera(side);
+renderer.setViewport(i*half,0,half,h);
+renderer.setScissor(i*half,0,half,h);
+renderer.render(scene,compareCamera);
+for(const m of visible)m.visible=true;
+}
+}finally{
+for(const m of visible)m.visible=true;
+renderer.setScissorTest(false);
+renderer.setViewport(0,0,w,h);
+}
+}
+function clearComparePeer(){
+if(comparePeer&&comparePeerOriginal)comparePeer.material=comparePeerOriginal;
+comparePeer=null;comparePeerOriginal=null;
+}
+function highlightComparePeer(mesh){
+if(!compareMode||!mesh)return;
+const raw=mesh.userData.atlasName,side=neuroSide(raw);
+if(side==="midline")return;
+const peerName=/\.[lr]$/i.test(raw)?raw.replace(/\.[lr]$/i,side==="left"?".r":".l"):null;
+if(!peerName)return;
+const peer=allMeshes.find(m=>m!==mesh&&m.userData.atlasLayer===mesh.userData.atlasLayer&&m.userData.atlasName===peerName&&m.visible);
+if(!peer)return;
+comparePeer=peer;comparePeerOriginal=peer.material;
+const mat=peer.material.clone();mat.emissive=new THREE.Color("#e2ba78");mat.emissiveIntensity=.38;peer.material=mat;
+$("infoText").textContent="La estructura equivalente del otro hemisferio está destacada en dorado. Ambas vistas comparten la misma rotación."
+}
+function updateCompareUI(){
+const b=$("compareToggle");b.classList.toggle("active",compareMode);b.setAttribute("aria-pressed",String(compareMode));
+b.textContent=compareMode?"▣ Volver a vista única":"◧ Comparar ambos hemisferios";
+$("compareOverlay").hidden=!compareMode;
+const [l,r]=compareSideCounts();
+$("leftCount").textContent=l+" piezas";$("rightCount").textContent=r+" piezas";
+$("compareHelp").textContent=compareMode?"Las dos mitades comparten giro y zoom. Tocá una pieza para destacar su equivalente del otro lado.":"Dos visores sincronizados, uno para cada hemisferio. Girá cualquiera para observar ambos desde el mismo ángulo.";
+if(compareMode){$("multiLabels").replaceChildren();labelsActive=[];$("pin3d").hidden=true}
+else refreshMultiLabels();
+}
+async function toggleComparison(force){
+const enable=typeof force==="boolean"?force:!compareMode;
+if(!enable){compareMode=false;clearComparePeer();updateCompareUI();setStatus("Vista única restaurada.");return}
+neuroHemisphere="both";
+const [l,r]=compareSideCounts();
+if(l===0||r===0){
+setStatus("Esta región no tiene dos grupos laterales comparables. Probá un lóbulo o el encéfalo completo.");
+return
+}
+compareMode=true;clearComparePeer();renderNeuroZones();updateCompareUI();await selectNeuroZone(neuroZoneId);
+if(compareMode){const [left,right]=compareSideCounts();if(!left||!right){compareMode=false;updateCompareUI();setStatus("La región elegida no permite una comparación bilateral.")}}
+}
+function clearSliceUI(){
+sliceAxis=null;$("sliceStatus").textContent="SIN CORTE";
+$("sliceDescription").textContent="Elegí un plano y ajustá la profundidad. Los cortes recortan las superficies disponibles; no generan tejidos internos nuevos.";
+for(const b of document.querySelectorAll(".sliceTabs button"))b.classList.remove("active")
+}
+function setSlice(axis){
+if(!["x","y","z"].includes(axis))return;
+if(compareMode){compareMode=false;clearComparePeer();updateCompareUI()}
+sliceAxis=axis;
+const labels={x:"SAGITAL",z:"CORONAL",y:"AXIAL"};
+const descriptions={
+x:"El plano sagital divide la cabeza en regiones izquierda y derecha. Mové la profundidad para revelar superficies internas disponibles.",
+z:"El plano coronal divide regiones anteriores y posteriores. Podés comparar estructuras bilaterales a distintas profundidades.",
+y:"El plano axial es horizontal: recorre la cabeza desde arriba hacia abajo según la profundidad seleccionada."
+};
+$("sliceStatus").textContent=labels[axis];$("sliceDescription").textContent=descriptions[axis];
+$("clipA").checked=true;$("axisA").value=axis;$("clipB").checked=false;
+$("depthA").value=$("sliceDepth").value;$("sliceValue").textContent=$("sliceDepth").value+"%";
+for(const b of document.querySelectorAll(".sliceTabs button"))b.classList.toggle("active",b.dataset.slice===axis);
+updateClips();frameNeuro(axis==="x"?"Perfil":axis==="y"?"Superior":"Frente");
+setStatus("Corte "+labels[axis].toLowerCase()+" activo. Los cortes son geométricos, no tomografías ni resonancias.")
+}
+function clearSlice(){
+clearSliceUI();$("clipA").checked=false;$("clipB").checked=false;updateClips();frameNeuro("Frente");
+setStatus("Corte desactivado.")
+}
+
 // V12 — Navegación neuroanatómica basada en las piezas 3D disponibles
 function renderNeuroZones(){
 const host=$("neuroZones");host.replaceChildren();
@@ -610,7 +738,7 @@ controls.minDistance=.028;controls.maxDistance=Math.max(homeHeight*2.5,dist*5);c
 $("viewLabel").textContent=(neuroZone().name+" · "+view).toUpperCase();
 }
 async function selectNeuroZone(id){
-const zone=NEURO_ZONES.find(z=>z.id===id);if(!zone)return;
+clearSliceUI();$("clipA").checked=false;$("clipB").checked=false;updateClips();const zone=NEURO_ZONES.find(z=>z.id===id);if(!zone)return;
 const token=++neuroRequest;neuroZoneId=id;headView="full";++headRequest;++dissectToken;
 if(isolateSnapshot)restoreIsolation();hiddenParts.clear();clearSelection();setExplode(0);
 for(const c of config){
@@ -634,7 +762,7 @@ frameNeuro("Frente");updateClips();refreshResults();refreshMultiLabels();
 setStatus(n?"Explorando "+zone.name+". Podés seleccionar una pieza, comparar hemisferios o mostrar contexto.":"No se encontraron piezas para esta región en el modelo cargado.");
 }
 function refreshNeuroLabels(){
-const host=$("multiLabels");host.replaceChildren();labelsActive=[];
+const host=$("multiLabels");host.replaceChildren();labelsActive=[];if(compareMode)return;
 if(!$("multiLabelsEnabled").checked)return;
 const meshes=neuroActiveMeshes().filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible);
 const sorted=[...meshes].sort((a,b)=>a.userData.atlasLabel.localeCompare(b.userData.atlasLabel,"es"));
@@ -676,19 +804,12 @@ if(mesh){choosePart(mesh);focusPart();refreshMultiLabels();setStatus("Estructura
 else setStatus("La estructura no está disponible en las piezas cargadas.")
 }
 function quickNeuroView(view){
-$("clipA").checked=false;$("clipB").checked=false;updateClips();frameNeuro(view);
+clearSliceUI();$("clipA").checked=false;$("clipB").checked=false;updateClips();frameNeuro(view);
 for(const b of document.querySelectorAll(".neuroCutButtons button"))b.classList.remove("active");
 const id=view==="Frente"?"neuroFront":view==="Perfil"?"neuroSide":"neuroTop";
 $(id).classList.add("active")
 }
-function neuroSagittalCut(){
-const box=currentClipBounds();if(box.isEmpty())return;
-$("clipA").checked=true;$("axisA").value="x";$("depthA").value=50;
-$("clipB").checked=false;updateClips();frameNeuro("Perfil");
-for(const b of document.querySelectorAll(".neuroCutButtons button"))b.classList.remove("active");
-$("neuroMid").classList.add("active");
-setStatus("Corte sagital: se recorta una mitad geométrica. No se generan superficies internas nuevas.")
-}
+function neuroSagittalCut(){setSlice("x");$("neuroMid").classList.add("active")}
 renderNeuroZones();updateNeuroSummary();
 
 // V11 — Fichas, favoritos y planos de corte
