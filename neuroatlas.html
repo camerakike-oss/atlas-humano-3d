@@ -357,16 +357,15 @@ function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;if(!w||!h)return;
 new ResizeObserver(resize).observe(wrap);resize();
 function frame(){requestAnimationFrame(frame);controls.update();renderer.render(scene,camera);updatePin();if((++labelTick%3)===0)updateMultiLabels()}frame();
 canvas.addEventListener("pointerdown",e=>{canvas.dataset.downX=e.clientX;canvas.dataset.downY=e.clientY});
-canvas.addEventListener("pointerup",e=>{if(Math.hypot(e.clientX-Number(canvas.dataset.downX||e.clientX),e.clientY-Number(canvas.dataset.downY||e.clientY))>6)return;const r=canvas.getBoundingClientRect();const xy=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);raycaster.setFromCamera(xy,camera);const hits=raycaster.intersectObjects(allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible),false);if(hits.length)choosePart(hits[0].object)});
+canvas.addEventListener("pointerup",e=>{if(Math.hypot(e.clientX-Number(canvas.dataset.downX||e.clientX),e.clientY-Number(canvas.dataset.downY||e.clientY))>6)return;const r=canvas.getBoundingClientRect();const xy=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);raycaster.setFromCamera(xy,camera);const hits=raycaster.intersectObjects(allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible&&(!neuroMode||neuroMatches(neuroZone(),m.userData.atlasLayer,m.userData.atlasName,neuroHemisphere))),false);if(hits.length)choosePart(hits[0].object)});
 window.addEventListener("keydown",e=>{if(e.key==="Escape"&&isolateSnapshot)restoreIsolation()});
 }catch(e){updateLoading("No se pudo iniciar WebGL",String(e.message||e),0);setStatus("El visor 3D requiere WebGL. La V4 continúa disponible.");return false}
 return true
 }
 function frameBody(group){if(bodyBounds)return;const box=new THREE.Box3().setFromObject(group);if(box.isEmpty())return;bodyBounds=box;const c=box.getCenter(new THREE.Vector3());homeHeight=Math.max(1,box.max.y-box.min.y);root.position.set(-c.x,-box.min.y,-c.z);neckPlane.constant=-homeHeight*headCutoff;setCamera("Frente");updateClips()}
-function activeHeadMeshes(){
-const v=HEAD_VIEWS.find(x=>x.id===headView)||HEAD_VIEWS[0];
-return allMeshes.filter(m=>(headView==="full"?HEAD_VIEWS.slice(1).some(g=>g.re.test(m.userData.atlasName)):v.layers.includes(m.userData.atlasLayer)&&v.re.test(m.userData.atlasName))&&!hiddenParts.has(m.uuid));
-}
+function neuroZone(){return NEURO_ZONES.find(z=>z.id===neuroZoneId)||NEURO_ZONES[0]}
+function neuroActiveMeshes(){const zone=neuroZone();return allMeshes.filter(m=>neuroMatches(zone,m.userData.atlasLayer,m.userData.atlasName,neuroHemisphere)&&!hiddenParts.has(m.uuid))}
+function activeHeadMeshes(){return neuroMode?neuroActiveMeshes():allMeshes.filter(m=>HEAD_VIEWS.slice(1).some(g=>g.re.test(m.userData.atlasName))&&!hiddenParts.has(m.uuid))}
 function frameHead(view="Frente"){
 if(!camera||!controls||!bodyBounds)return;
 viewName=view;const h=homeHeight,v=HEAD_VIEWS.find(x=>x.id===headView)||HEAD_VIEWS[0];
@@ -382,9 +381,26 @@ camera.up.set(0,view==="Superior"?0:1,view==="Superior"?-1:0);
 camera.position.copy(target).add(offset);controls.target.copy(target);controls.minDistance=.035;controls.maxDistance=h*2.5;controls.update();
 $("viewLabel").textContent=(v.title+" · "+view).toUpperCase();
 }
-function setCamera(view){frameHead(view)}
+function setCamera(view){if(neuroMode)frameNeuro(view);else frameHead(view)}
 function updateLayerUI(){for(const c of config){const s=state[c.key];const b=$("toggle-"+c.key),t=$("state-"+c.key);if(b){b.textContent=s.loading?"Cargando":s.failed?"Reintentar":s.visible?"Visible":"Oculta";b.classList.toggle("on",s.visible);b.setAttribute("aria-pressed",String(s.visible))}if(t)t.textContent=s.loading?"Descargando...":s.failed?"Error":s.loaded?s.meshes.length+" piezas":"Pendiente"}}
 function applyLayer(key){
+if(neuroMode){
+const layer=state[key];if(!layer.group)return;
+const zone=neuroZone(),allowContext=neuroContext&&key==="organs";
+layer.group.visible=layer.visible||allowContext;
+for(const mesh of layer.meshes){
+const raw=mesh.userData.atlasName,match=neuroMatches(zone,key,raw,neuroHemisphere);
+const ghost=allowContext&&!match&&NEURO_ZONES[0].re.test(raw)&&(neuroHemisphere==="both"||neuroSide(raw)===neuroHemisphere||neuroSide(raw)==="midline");
+mesh.visible=((match&&layer.visible)||ghost)&&!hiddenParts.has(mesh.uuid)&&(!isolateSnapshot||mesh===selected);
+const base=mesh.userData.baseMaterial,mat=ghost?(base.userData.neuroGhost||(base.userData.neuroGhost=base.clone())):base;
+const alpha=ghost?.12:layer.opacity;
+mat.opacity=alpha;mat.transparent=alpha<.99;mat.depthWrite=alpha>.62;mesh.renderOrder=alpha<.99?2:0;
+if(mesh!==selected||!selectedMaterial)mesh.material=mat;
+}
+if(selected&&selected.userData.atlasLayer===key&&selectedMaterial){selectedMaterial.opacity=layer.opacity;selectedMaterial.transparent=layer.opacity<.99;selectedMaterial.depthWrite=layer.opacity>.62}
+return;
+}
+
 const layer=state[key];if(!layer.group)return;
 layer.group.visible=organMode?key==="organs":layer.visible;
 for(const mesh of layer.meshes){
@@ -455,7 +471,7 @@ if(isolateSnapshot)restoreIsolation();hiddenParts.clear();clearSelection();
 if(bodySnapshot){for(const x of bodySnapshot){state[x.key].visible=x.visible;state[x.key].opacity=x.opacity;$("range-"+x.key).value=Math.round(x.opacity*100);$("opacity-"+x.key).textContent=Math.round(x.opacity*100)+"%"}}
 bodySnapshot=null;for(const c of config)applyLayer(c.key);
 organUI();updateLayerUI();refreshResults();updateClips();if(camera)setCamera("Frente");setStatus("Volviste al cuerpo completo.")}
-function currentClipBounds(){if(organMode&&groupMeshes().length)return groupBox();const group=state.skeleton.group||state.organs.group;return group?new THREE.Box3().setFromObject(group):new THREE.Box3()}
+function currentClipBounds(){if(neuroMode){const box=new THREE.Box3();for(const m of neuroActiveMeshes())box.expandByObject(m);return box}if(organMode&&groupMeshes().length)return groupBox();const group=state.skeleton.group||state.organs.group;return group?new THREE.Box3().setFromObject(group):new THREE.Box3()}
 function updateClips(){
 if(!renderer)return;const box=currentClipBounds();if(box.isEmpty()){renderer.clippingPlanes=[neckPlane];return}
 const planes=[];
@@ -469,7 +485,7 @@ const box=new THREE.Box3().setFromObject(selected);if(box.isEmpty()){pin.hidden=
 const p=box.getCenter(new THREE.Vector3()).project(camera);if(p.z<-1||p.z>1||Math.abs(p.x)>1.1||Math.abs(p.y)>1.1){pin.hidden=true;return}
 pin.hidden=false;pin.textContent=selected.userData.atlasLabel;pin.style.left=((p.x+1)*50)+"%";pin.style.top=((1-p.y)*50)+"%";
 }
-function saveImage(){if(!renderer)return;try{renderer.render(scene,camera);const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="atlas-humano-v11-"+(activeSection||headView)+".png";document.body.appendChild(a);a.click();a.remove();setStatus("Imagen PNG generada desde la vista actual.")}catch(e){setStatus("El navegador no permitió guardar la captura: "+e.message)}}
+function saveImage(){if(!renderer)return;try{renderer.render(scene,camera);const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="neuroatlas-v12-"+neuroZoneId+"-"+neuroHemisphere+".png";document.body.appendChild(a);a.click();a.remove();setStatus("Imagen PNG generada desde la vista actual.")}catch(e){setStatus("El navegador no permitió guardar la captura: "+e.message)}}
 async function runTour(){if(tourIndex<0)return;const expected=tourIndex;const step=tourStops[tourIndex];$("tourCount").textContent="PARADA "+(tourIndex+1)+" / "+tourStops.length;$("tourText").textContent=step.title+" — "+step.text;$("tourNext").textContent=tourIndex===tourStops.length-1?"Repetir recorrido ↺":"Siguiente →";await enterOrgan(step.group);if(tourIndex!==expected||organGroup?.id!==step.group)return;const match=groupMeshes().find(m=>step.re.test(m.userData.atlasName));if(match){choosePart(match);focusPart()} }
 for(const g of organGroups){const b=document.createElement("button");b.type="button";b.className="organBtn";b.dataset.group=g.id;b.textContent=g.label;b.addEventListener("click",()=>{tourIndex=-1;enterOrgan(g.id)});$("organGrid").appendChild(b)}
 $("returnBody").addEventListener("click",()=>{tourIndex=-1;leaveOrgan()});
@@ -541,7 +557,7 @@ function toggleFavorite(){
 if(!selected)return;const raw=selected.userData.atlasName,layer=selected.userData.atlasLayer;
 const i=favorites.findIndex(x=>x.raw===raw&&x.layer===layer);
 if(i>=0)favorites.splice(i,1);
-else if(favorites.length<80)favorites.push({raw,layer,label:headInfo(raw)?.label||selected.userData.atlasLabel,view:headView});
+else if(favorites.length<80)favorites.push({raw,layer,label:headInfo(raw)?.label||selected.userData.atlasLabel,view:neuroZoneId});
 else{setStatus("Máximo de 80 favoritos en este navegador.");return}
 saveFavorites();renderFavorites();updateDetailCard()
 }
@@ -647,7 +663,7 @@ nerves:[/trigeminal nerve/i,/facial nerve/i,/optic nerve/i,/vagus nerve/i],
 vessels:[/internal carotid artery/i,/vertebral artery/i,/internal jugular vein/i,/facial artery/i],
 jaw:[/mandible/i,/maxilla/i,/masseter/i,/temporalis muscle/i]
 };
-function refreshMultiLabels(){
+function refreshMultiLabels(){if(neuroMode){refreshNeuroLabels();return}
 const host=$("multiLabels");host.replaceChildren();labelsActive=[];
 if(!$("multiLabelsEnabled").checked)return;
 const patterns=LABEL_RULES[headView]||LABEL_RULES.full;
