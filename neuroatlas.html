@@ -235,7 +235,7 @@ import {materialIdentity,createTissueMaterial,setTissueStyle} from "./atlas-v8-m
 import {HEAD_VIEWS,HEAD_TOUR,headInfo} from "./atlas-v9-head-data.js";
 import {NEURO_QUIZ as HEAD_QUIZ} from "./atlas-v12-neuro-data.js";
 import {detailFor,SECTION_PRESETS} from "./atlas-v11-head-details.js";
-import {NEURO_ZONES,NEURO_TOUR,neuroMatches,neuroSide} from "./atlas-v12-neuro-data.js";
+import {NEURO_ZONES,NEURO_TOUR,neuroMatches,neuroSide,neuroLabel} from "./atlas-v12-neuro-data.js";
 const $=id=>document.getElementById(id);
 const config=[
 {key:"skin",label:"Piel",color:"#d4a891",count:256},
@@ -421,12 +421,12 @@ const group=gltf.scene;s.group=group;
 const materialCache=new Map();
 group.traverse(o=>{if(!o.isMesh)return;const meta=Object.keys(o.userData).length?o.userData:o.parent?.userData||{};const raw=String(meta.zname||o.name||"Estructura");const mname=String(meta.zmat||"");const identity=materialIdentity(key,raw,mname);const cacheKey=identity.tissue+"|"+key+"|"+identity.tone;
 if(!materialCache.has(cacheKey)){const mat=createTissueMaterial(THREE,key,raw,mname,identity.tone,materialColor(key,raw,mname),visualStyle);materialCache.set(cacheKey,mat);baseMaterials.add(mat)}
-o.material=materialCache.get(cacheKey);o.userData.atlasName=raw;o.userData.atlasLayer=key;o.userData.baseMaterial=o.material;o.userData.atlasLabel=headInfo(raw)?.label||displayName(raw);s.meshes.push(o);allMeshes.push(o)});
+o.material=materialCache.get(cacheKey);o.userData.atlasName=raw;o.userData.atlasLayer=key;o.userData.baseMaterial=o.material;o.userData.atlasLabel=headInfo(raw)?.label||neuroLabel(raw)||displayName(raw);s.meshes.push(o);allMeshes.push(o)});
 root.add(group);applyExplodeLayers();s.loaded=true;s.loading=false;s.failed=false;loadingCount--;frameBody(group);applyLayer(key);countLoaded();updateLayerUI();$("loading").hidden=true;setStatus("Cargadas "+allMeshes.length+" piezas reales. Seleccioná una estructura para explorarla.");refreshResults();refreshMultiLabels();resolve();
 },xhr=>{if(!allMeshes.length&&xhr.lengthComputable)updateLoading("Descargando "+names[key],Math.round(xhr.loaded/xhr.total*100)+"% de la capa "+names[key],Math.min(100,Math.round(xhr.loaded/xhr.total*100)))},()=>next())}
 next()});return s.pending}
 function clearSelection(){if(selected&&selectedOriginal){selected.material=selectedOriginal}selected=null;selectedOriginal=null;selectedMaterial=null;$("selectedLayer").textContent="SIN SELECCIÓN";$("selectedName").textContent="Tocá una estructura";$("selectedDesc").textContent="Seleccioná una parte del cuerpo para consultar su nombre, aislarla o acercarte.";$("infoTitle").textContent="Exploración por capas";$("infoText").textContent="Podés activar varios sistemas simultáneamente y ajustar su transparencia.";for(const id of ["isolate","hidePart","focus"])$(id).disabled=true;$("organLab").hidden=true;$("pin3d").hidden=true;updateDetailCard()}
-function choosePart(mesh){if(isolateSnapshot)restoreIsolation();if(selected&&selectedOriginal)selected.material=selectedOriginal;selected=mesh;selectedOriginal=mesh.material;selectedMaterial=selectedOriginal.clone();selectedMaterial.emissive=new THREE.Color("#39b9bc");selectedMaterial.emissiveIntensity=.2;mesh.material=selectedMaterial;const raw=mesh.userData.atlasName,key=mesh.userData.atlasLayer;$("selectedLayer").textContent=names[key].toUpperCase();$("selectedName").textContent=headInfo(raw)?.label||mesh.userData.atlasLabel;$("selectedDesc").textContent=description(raw,key);$("infoTitle").textContent="Nombre original: "+raw;$("infoText").textContent="Podés aislar esta pieza, acercarla y aplicar cortes geométricos para examinar su forma. El nombre anatómico original se conserva arriba.";for(const id of ["isolate","hidePart","focus"])$(id).disabled=false;updateMultiLabels();const lab=$("organLab");lab.hidden=key!=="organs";if(key==="organs")lab.href="organos.html?pieza="+encodeURIComponent(raw);updateDetailCard()}
+function choosePart(mesh){if(isolateSnapshot)restoreIsolation();if(selected&&selectedOriginal)selected.material=selectedOriginal;selected=mesh;selectedOriginal=mesh.material;selectedMaterial=selectedOriginal.clone();selectedMaterial.emissive=new THREE.Color("#39b9bc");selectedMaterial.emissiveIntensity=.2;mesh.material=selectedMaterial;const raw=mesh.userData.atlasName,key=mesh.userData.atlasLayer;$("selectedLayer").textContent=names[key].toUpperCase();$("selectedName").textContent=headInfo(raw)?.label||neuroLabel(raw)||mesh.userData.atlasLabel;$("selectedDesc").textContent=description(raw,key);$("infoTitle").textContent="Nombre original: "+raw;$("infoText").textContent="Podés aislar esta pieza, acercarla y aplicar cortes geométricos para examinar su forma. El nombre anatómico original se conserva arriba.";for(const id of ["isolate","hidePart","focus"])$(id).disabled=false;updateMultiLabels();const lab=$("organLab");lab.hidden=key!=="organs";if(key==="organs")lab.href="organos.html?pieza="+encodeURIComponent(raw);updateDetailCard()}
 function restoreIsolation(){if(!isolateSnapshot)return;for(const [k,visible] of isolateSnapshot.layers)state[k].visible=visible;for(const [mesh,visible] of isolateSnapshot.meshes)mesh.visible=visible;isolateSnapshot=null;for(const c of config)applyLayer(c.key);updateLayerUI()}
 function isolatePart(){if(!selected)return;if(isolateSnapshot)restoreIsolation();isolateSnapshot={layers:config.map(c=>[c.key,state[c.key].visible]),meshes:allMeshes.map(m=>[m,m.visible])};for(const c of config){state[c.key].visible=c.key===selected.userData.atlasLayer;if(state[c.key].group)state[c.key].group.visible=state[c.key].visible}for(const m of allMeshes)m.visible=m===selected;updateLayerUI();focusPart();setStatus("Pieza aislada. Tocá «Mostrar todo» para restaurar la escena.")}
 function hidePart(){if(!selected)return;hiddenParts.add(selected.uuid);const m=selected;clearSelection();m.visible=false;setStatus("Pieza ocultada. «Mostrar todo» restaura las estructuras.")}
@@ -613,7 +613,7 @@ chosen.push(mesh);used.add(mesh.userData.atlasName);
 }
 for(const mesh of chosen){
 const label=document.createElement("button");label.type="button";label.className="multiLabel";
-label.textContent=headInfo(mesh.userData.atlasName)?.label||mesh.userData.atlasLabel;
+label.textContent=headInfo(mesh.userData.atlasName)?.label||neuroLabel(mesh.userData.atlasName)||mesh.userData.atlasLabel;
 label.title="Seleccionar "+label.textContent;
 label.addEventListener("click",()=>{choosePart(mesh);refreshMultiLabels()});
 host.appendChild(label);labelsActive.push({mesh,label});
@@ -664,15 +664,19 @@ function saveFavorites(){try{localStorage.setItem(FAVORITES_KEY,JSON.stringify(f
 function updateDetailCard(){
 const b=$("favoriteToggle");
 if(!selected){
-$("detailSystem").textContent="Sin estructura seleccionada";$("detailName").textContent="Exploración de la cabeza";
+$("detailSystem").textContent="Sin estructura seleccionada";$("detailName").textContent="Exploración del encéfalo";
 $("detailFunction").textContent="Elegí una estructura del visor para consultar su función.";
 $("detailRelations").textContent="Podrás observar cómo se relaciona con los tejidos vecinos.";
 $("detailKey").textContent="Los modelos 3D son representaciones educativas.";
 b.disabled=true;b.textContent="☆ Guardar estructura";b.classList.remove("saved");return
 }
 const raw=selected.userData.atlasName,layer=selected.userData.atlasLayer,card=detailFor(raw,layer);
-$("detailSystem").textContent=card.system;$("detailName").textContent=headInfo(raw)?.label||card.name||selected.userData.atlasLabel;
-$("detailFunction").textContent=card.function;$("detailRelations").textContent=card.relations;$("detailKey").textContent=card.key;
+const specific=NEURO_ZONES.find(z=>z.id!=="brain"&&neuroMatches(z,layer,raw,"both"))||neuroZone();
+$("detailSystem").textContent=card.name?card.system:specific.name;
+$("detailName").textContent=headInfo(raw)?.label||neuroLabel(raw)||card.name||selected.userData.atlasLabel;
+$("detailFunction").textContent=card.name?card.function:specific.description;
+$("detailRelations").textContent=card.name?card.relations:"Esta pieza se encuentra en la región "+specific.name.toLowerCase()+". Su función se entiende mejor dentro de las redes y estructuras vecinas.";
+$("detailKey").textContent=card.name?card.key:specific.fact;
 const saved=favorites.some(x=>x.raw===raw&&x.layer===layer);
 b.disabled=false;b.textContent=saved?"★ Guardada en favoritos":"☆ Guardar en favoritos";b.classList.toggle("saved",saved)
 }
@@ -690,15 +694,16 @@ function toggleFavorite(){
 if(!selected)return;const raw=selected.userData.atlasName,layer=selected.userData.atlasLayer;
 const i=favorites.findIndex(x=>x.raw===raw&&x.layer===layer);
 if(i>=0)favorites.splice(i,1);
-else if(favorites.length<80)favorites.push({raw,layer,label:headInfo(raw)?.label||selected.userData.atlasLabel,view:neuroZoneId});
+else if(favorites.length<80)favorites.push({raw,layer,label:headInfo(raw)?.label||neuroLabel(raw)||selected.userData.atlasLabel,view:neuroZoneId});
 else{setStatus("Máximo de 80 favoritos en este navegador.");return}
 saveFavorites();renderFavorites();updateDetailCard()
 }
 async function jumpToFavorite(x){
 if(!x||!names[x.layer])return;
-const v=HEAD_VIEWS.find(v=>v.id===x.view&&v.layers.includes(x.layer)&&v.re.test(x.raw))||HEAD_VIEWS.find(v=>v.id!=="full"&&v.layers.includes(x.layer)&&v.re.test(x.raw));
-if(v)await selectHeadView(v.id);
-else{await selectHeadView("full");if(x.layer!=="skin"){state.skin.visible=false;applyLayer("skin")}state[x.layer].visible=true;await loadLayer(x.layer);applyLayer(x.layer);updateLayerUI()}
+const zone=NEURO_ZONES.find(z=>z.id===x.view&&neuroMatches(z,x.layer,x.raw,"both"))||NEURO_ZONES.find(z=>neuroMatches(z,x.layer,x.raw,"both"));
+if(!zone){setStatus("Este favorito no corresponde a una región del Neuroatlas.");return}
+neuroHemisphere="both";
+await selectNeuroZone(zone.id);
 const mesh=state[x.layer].meshes.find(m=>m.userData.atlasName===x.raw);
 if(mesh){hiddenParts.delete(mesh.uuid);mesh.visible=true;choosePart(mesh);focusPart();refreshMultiLabels();setStatus("Favorito recuperado: "+(x.label||x.raw))}
 else setStatus("La pieza guardada no está disponible en el modelo cargado.")
