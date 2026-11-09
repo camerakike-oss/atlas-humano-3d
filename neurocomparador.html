@@ -674,12 +674,12 @@ else refreshMultiLabels();
 async function toggleComparison(force){
 const enable=typeof force==="boolean"?force:!compareMode;
 if(!enable){compareMode=false;clearComparePeer();updateCompareUI();setStatus("Vista única restaurada.");return}
-neuroHemisphere="both";
 const [l,r]=compareSideCounts();
 if(l===0||r===0){
 setStatus("Esta región no tiene dos grupos laterales comparables. Probá un lóbulo o el encéfalo completo.");
 return
 }
+neuroHemisphere="both";
 compareMode=true;clearComparePeer();renderNeuroZones();updateCompareUI();await selectNeuroZone(neuroZoneId);
 if(compareMode){const [left,right]=compareSideCounts();if(!left||!right){compareMode=false;updateCompareUI();setStatus("La región elegida no permite una comparación bilateral.")}}
 }
