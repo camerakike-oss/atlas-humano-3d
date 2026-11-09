@@ -563,6 +563,17 @@ $("neuroSide").addEventListener("click",()=>quickNeuroView("Perfil"));
 $("neuroTop").addEventListener("click",()=>quickNeuroView("Superior"));
 $("neuroMid").addEventListener("click",neuroSagittalCut);
 $("neuroReset").addEventListener("click",()=>quickNeuroView("Frente"));
+// V13 — controles de comparación y cortes guiados
+$("compareToggle").addEventListener("click",()=>toggleComparison());
+for(const id of ["sliceSagittal","sliceCoronal","sliceAxial"]){
+$(id).addEventListener("click",()=>setSlice($(id).dataset.slice))
+}
+$("sliceDepth").addEventListener("input",e=>{
+$("sliceValue").textContent=e.target.value+"%";
+if(sliceAxis){$("depthA").value=e.target.value;updateClips()}
+});
+$("sliceClear").addEventListener("click",clearSlice);
+updateCompareUI();
 // V11: controles de corte, fichas y favoritos
 for(const p of SECTION_PRESETS)$(p.id).addEventListener("click",()=>applySection(p.id));
 $("sectionDepth").addEventListener("input",e=>{
@@ -756,6 +767,8 @@ await Promise.all(need.filter(k=>!state[k].loaded).map(k=>loadLayer(k)));
 if(token!==neuroRequest)return;
 for(const c of config)applyLayer(c.key);
 const n=neuroActiveMeshes().length;
+if(compareMode){const [left,right]=compareSideCounts();if(!left||!right){compareMode=false;clearComparePeer();setStatus("Esta zona no dispone de dos grupos laterales comparables.")}}
+updateCompareUI();
 $("countLabel").textContent=n+" PIEZAS DE LA ZONA";
 $("modelStatus").textContent=n?"NEUROATLAS ACTIVO":"SIN PIEZAS";
 frameNeuro("Frente");updateClips();refreshResults();refreshMultiLabels();
@@ -976,7 +989,7 @@ host.appendChild(label);labelsActive.push({mesh,label});
 updateMultiLabels();
 }
 function updateMultiLabels(){
-if(!camera||!$("multiLabelsEnabled").checked)return;
+if(compareMode)return;if(!camera||!$("multiLabelsEnabled").checked)return;
 const placed=[];
 for(const item of labelsActive){
 const {mesh,label}=item;
