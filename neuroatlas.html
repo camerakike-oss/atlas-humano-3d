@@ -522,6 +522,127 @@ organUI();
 
 
 
+
+// V12 — Navegación neuroanatómica basada en las piezas 3D disponibles
+function renderNeuroZones(){
+const host=$("neuroZones");host.replaceChildren();
+for(const z of NEURO_ZONES){
+const b=document.createElement("button");b.type="button";b.className="neuroZone"+(neuroZoneId===z.id?" active":"");
+b.style.setProperty("--zone-accent",z.accent);b.setAttribute("aria-pressed",String(neuroZoneId===z.id));
+const dot=document.createElement("span");dot.className="dot";dot.setAttribute("aria-hidden","true");
+const label=document.createElement("span");label.textContent=z.icon+" "+z.name;b.append(dot,label);
+b.addEventListener("click",()=>{neuroTourIndex=-1;selectNeuroZone(z.id)});host.appendChild(b)
+}
+for(const b of document.querySelectorAll("#sideButtons button")){
+b.classList.toggle("active",b.dataset.side===neuroHemisphere);b.setAttribute("aria-pressed",String(b.dataset.side===neuroHemisphere));
+}
+}
+function updateNeuroSummary(){
+const z=neuroZone();$("neuroZoneType").textContent=z.layers.map(k=>names[k]).join(" + ").toUpperCase();
+$("neuroZoneTitle").textContent=z.name;$("neuroZoneDesc").textContent=z.description;
+$("neuroZoneFact").textContent="Dato clave: "+z.fact;
+}
+function frameNeuro(view="Frente"){
+if(!camera||!controls||!bodyBounds)return;
+const box=new THREE.Box3();
+for(const m of neuroActiveMeshes())box.expandByObject(m);
+let target=new THREE.Vector3(0,homeHeight*.91,0),dist=homeHeight*.47;
+if(!box.isEmpty()){
+target=box.getCenter(new THREE.Vector3());
+const size=box.getSize(new THREE.Vector3());
+dist=Math.max(.17,Math.max(size.x,size.y,size.z)*2.65);
+}
+const offset=view==="Espalda"?new THREE.Vector3(0,dist*.08,-dist):
+view==="Perfil"?new THREE.Vector3(dist,dist*.08,0):
+view==="Superior"?new THREE.Vector3(0,dist,.0001):
+new THREE.Vector3(0,dist*.08,dist);
+camera.up.set(0,view==="Superior"?0:1,view==="Superior"?-1:0);
+controls.target.copy(target);camera.position.copy(target).add(offset);
+controls.minDistance=.028;controls.maxDistance=Math.max(homeHeight*2.5,dist*5);controls.update();
+$("viewLabel").textContent=(neuroZone().name+" · "+view).toUpperCase();
+}
+async function selectNeuroZone(id){
+const zone=NEURO_ZONES.find(z=>z.id===id);if(!zone)return;
+const token=++neuroRequest;neuroZoneId=id;headView="full";++headRequest;++dissectToken;
+if(isolateSnapshot)restoreIsolation();hiddenParts.clear();clearSelection();setExplode(0);
+for(const c of config){
+state[c.key].visible=zone.layers.includes(c.key);state[c.key].opacity=1;
+$("range-"+c.key).value=100;$("opacity-"+c.key).textContent="100%";
+}
+renderNeuroZones();updateNeuroSummary();updateLayerUI();
+for(const c of config)applyLayer(c.key);
+$("selectedLayer").textContent="REGIÓN NEUROANATÓMICA";$("selectedName").textContent=zone.name;
+$("selectedDesc").textContent=zone.description;
+$("infoTitle").textContent="Piezas anatómicas del modelo";$("infoText").textContent=zone.fact;
+$("search").value="";$("modelStatus").textContent="CARGANDO ZONA";
+const need=[...new Set([...zone.layers,...(neuroContext?["organs"]:[])])];
+await Promise.all(need.filter(k=>!state[k].loaded).map(k=>loadLayer(k)));
+if(token!==neuroRequest)return;
+for(const c of config)applyLayer(c.key);
+const n=neuroActiveMeshes().length;
+$("countLabel").textContent=n+" PIEZAS DE LA ZONA";
+$("modelStatus").textContent=n?"NEUROATLAS ACTIVO":"SIN PIEZAS";
+frameNeuro("Frente");updateClips();refreshResults();refreshMultiLabels();
+setStatus(n?"Explorando "+zone.name+". Podés seleccionar una pieza, comparar hemisferios o mostrar contexto.":"No se encontraron piezas para esta región en el modelo cargado.");
+}
+function refreshNeuroLabels(){
+const host=$("multiLabels");host.replaceChildren();labelsActive=[];
+if(!$("multiLabelsEnabled").checked)return;
+const meshes=neuroActiveMeshes().filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible);
+const sorted=[...meshes].sort((a,b)=>a.userData.atlasLabel.localeCompare(b.userData.atlasLabel,"es"));
+const targetCount=Math.min(6,sorted.length);
+const chosen=[];const used=new Set();
+const matchingTour=NEURO_TOUR.find(t=>t.zone===neuroZoneId);
+if(matchingTour){const special=sorted.find(m=>matchingTour.target.test(m.userData.atlasName));if(special){chosen.push(special);used.add(special.userData.atlasName)}}
+for(let i=0;i<sorted.length&&chosen.length<targetCount;i++){
+const idx=Math.min(sorted.length-1,Math.floor((i+.5)*sorted.length/Math.max(1,targetCount)));
+const mesh=sorted[idx];if(!mesh||used.has(mesh.userData.atlasName))continue;
+chosen.push(mesh);used.add(mesh.userData.atlasName);
+}
+for(const mesh of chosen){
+const label=document.createElement("button");label.type="button";label.className="multiLabel";
+label.textContent=headInfo(mesh.userData.atlasName)?.label||mesh.userData.atlasLabel;
+label.title="Seleccionar "+label.textContent;
+label.addEventListener("click",()=>{choosePart(mesh);refreshMultiLabels()});
+host.appendChild(label);labelsActive.push({mesh,label});
+}
+updateMultiLabels();
+}
+let neuroTourToken=0;
+async function runNeuroTour(){
+if(neuroTourIndex<0)return;
+const index=neuroTourIndex,token=++neuroTourToken,step=NEURO_TOUR[index];
+$("tourCount").textContent="PARADA "+(index+1)+" / "+NEURO_TOUR.length;
+$("tourText").textContent=step.title+" — "+step.text;
+$("tourNext").textContent=index===NEURO_TOUR.length-1?"Repetir recorrido ↺":"Siguiente →";
+await selectNeuroZone(step.zone);
+if(neuroTourIndex!==index||token!==neuroTourToken)return;
+const mesh=neuroActiveMeshes().find(m=>step.target.test(m.userData.atlasName));
+if(mesh){choosePart(mesh);focusPart();refreshMultiLabels()}
+}
+async function showNeuroQuizStructure(){
+const q=HEAD_QUIZ[quizIndex],index=quizIndex;
+await selectNeuroZone(q.zone);if(index!==quizIndex)return;
+const mesh=neuroActiveMeshes().find(m=>q.target.test(m.userData.atlasName));
+if(mesh){choosePart(mesh);focusPart();refreshMultiLabels();setStatus("Estructura de la pregunta: "+mesh.userData.atlasLabel)}
+else setStatus("La estructura no está disponible en las piezas cargadas.")
+}
+function quickNeuroView(view){
+$("clipA").checked=false;$("clipB").checked=false;updateClips();frameNeuro(view);
+for(const b of document.querySelectorAll(".neuroCutButtons button"))b.classList.remove("active");
+const id=view==="Frente"?"neuroFront":view==="Perfil"?"neuroSide":"neuroTop";
+$(id).classList.add("active")
+}
+function neuroSagittalCut(){
+const box=currentClipBounds();if(box.isEmpty())return;
+$("clipA").checked=true;$("axisA").value="x";$("depthA").value=50;
+$("clipB").checked=false;updateClips();frameNeuro("Perfil");
+for(const b of document.querySelectorAll(".neuroCutButtons button"))b.classList.remove("active");
+$("neuroMid").classList.add("active");
+setStatus("Corte sagital: se recorta una mitad geométrica. No se generan superficies internas nuevas.")
+}
+renderNeuroZones();updateNeuroSummary();
+
 // V11 — Fichas, favoritos y planos de corte
 function loadFavorites(){
 try{const d=JSON.parse(localStorage.getItem(FAVORITES_KEY)||"[]");favorites=Array.isArray(d)?d.filter(x=>x&&typeof x.raw==="string"&&typeof x.layer==="string"&&x.raw.length<240&&x.layer.length<30).slice(0,80):[]}catch(_){favorites=[]}
