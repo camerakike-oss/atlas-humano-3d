@@ -468,7 +468,7 @@ hits=raycaster.intersectObjects(compareVisibleMeshes().filter(m=>neuroSide(m.use
 }else{
 const xy=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
 raycaster.setFromCamera(xy,camera);
-hits=raycaster.intersectObjects(allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible&&(!neuroMode||neuroMatches(neuroZone(),m.userData.atlasLayer,m.userData.atlasName,neuroHemisphere))),false);
+hits=raycaster.intersectObjects(allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible&&(!neuroMode||(studioRouteMode?studioRouteMeshes.some(x=>x.mesh===m):neuroMatches(neuroZone(),m.userData.atlasLayer,m.userData.atlasName,neuroHemisphere)))),false);
 }
 if(hits.length)choosePart(hits[0].object)});
 window.addEventListener("keydown",e=>{if(e.key==="Escape"&&isolateSnapshot)restoreIsolation()});
@@ -478,7 +478,7 @@ return true
 function frameBody(group){if(bodyBounds)return;const box=new THREE.Box3().setFromObject(group);if(box.isEmpty())return;bodyBounds=box;const c=box.getCenter(new THREE.Vector3());homeHeight=Math.max(1,box.max.y-box.min.y);root.position.set(-c.x,-box.min.y,-c.z);neckPlane.constant=-homeHeight*headCutoff;setCamera("Frente");updateClips()}
 function neuroZone(){return NEURO_ZONES.find(z=>z.id===neuroZoneId)||NEURO_ZONES[0]}
 function neuroActiveMeshes(){const zone=neuroZone();return allMeshes.filter(m=>neuroMatches(zone,m.userData.atlasLayer,m.userData.atlasName,neuroHemisphere)&&!hiddenParts.has(m.uuid))}
-function activeHeadMeshes(){return neuroMode?neuroActiveMeshes():allMeshes.filter(m=>HEAD_VIEWS.slice(1).some(g=>g.re.test(m.userData.atlasName))&&!hiddenParts.has(m.uuid))}
+function activeHeadMeshes(){if(studioRouteMode)return studioRouteMeshes.map(x=>x.mesh).filter(m=>!hiddenParts.has(m.uuid));return neuroMode?neuroActiveMeshes():allMeshes.filter(m=>HEAD_VIEWS.slice(1).some(g=>g.re.test(m.userData.atlasName))&&!hiddenParts.has(m.uuid))}
 function frameHead(view="Frente"){
 if(!camera||!controls||!bodyBounds)return;
 viewName=view;const h=homeHeight,v=HEAD_VIEWS.find(x=>x.id===headView)||HEAD_VIEWS[0];
@@ -734,6 +734,7 @@ if(!state.organs.loaded)return [];
 return state.organs.meshes.filter(m=>NEURO_ZONES[0].re.test(m.userData.atlasName));
 }
 function setStudioExplode(value,reframe=false){
+if(homeHeight)neckPlane.constant=-homeHeight*.58;
 studioExplode=Math.max(0,Math.min(100,Number(value)||0));
 $("studioExplode").value=studioExplode;$("studioExplodePct").textContent=studioExplode+"%";
 if(studioEngine&&state.organs.loaded)studioEngine.explode(studioBrainMeshes(),studioExplode/100);
@@ -843,6 +844,7 @@ if(mesh!==selected||!selectedMaterial)mesh.material=mat;
 }
 }
 async function selectStudioRoute(id){
+if(homeHeight)neckPlane.constant=-homeHeight*.58;
 const route=STUDIO_ROUTES.find(x=>x.id===id);if(!route)return;
 clearStudioRoute();studioRouteId=id;
 const token=studioRouteRequest;
@@ -884,6 +886,7 @@ refreshResults();refreshMultiLabels();
 }
 async function enterStudioMode(mode,initial=false){
 if(!["dissect","routes","compare","explore"].includes(mode))return;
+if(homeHeight)neckPlane.constant=-homeHeight*(mode==="dissect"||mode==="routes"?.58:.77);
 const token=++studioModeRequest;studioMode=mode;studioCameraFlight=null;
 if(studioEngine)studioEngine.resetExplode();
 studioExplode=0;$("studioExplode").value=0;$("studioExplodePct").textContent="0%";
@@ -1044,7 +1047,7 @@ $("neuroZoneFact").textContent="Dato clave: "+z.fact;
 function frameNeuro(view="Frente"){
 if(!camera||!controls||!bodyBounds)return;
 const box=new THREE.Box3();
-for(const m of neuroActiveMeshes())box.expandByObject(m);
+for(const m of (studioRouteMode?studioRouteMeshes.map(x=>x.mesh):neuroActiveMeshes()))box.expandByObject(m);
 let target=new THREE.Vector3(0,homeHeight*.91,0),dist=homeHeight*.47;
 if(!box.isEmpty()){
 target=box.getCenter(new THREE.Vector3());
