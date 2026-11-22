@@ -653,7 +653,7 @@ $("sliceClear").addEventListener("click",clearSlice);
 updateCompareUI();
 // NeuroStudio V14 — controles de los cuatro modos
 for(const b of document.querySelectorAll(".studioTabs button"))b.addEventListener("click",()=>enterStudioMode(b.dataset.studio));
-$("studioExplode").addEventListener("input",async e=>{const value=Number(e.target.value);studioPreset="custom";renderStudioPresets();if(neuroZoneId!=="brain"){const token=++studioPresetRequest;await selectNeuroZone("brain");if(token!==studioPresetRequest||studioMode!=="dissect")return}setStudioExplode(value)});
+$("studioExplode").addEventListener("input",async e=>{const value=Number(e.target.value),token=++studioPresetRequest;studioPreset="custom";renderStudioPresets();if(neuroZoneId!=="brain"){await selectNeuroZone("brain");if(token!==studioPresetRequest||studioMode!=="dissect")return}setStudioExplode(value)});
 $("studioExplode").addEventListener("change",()=>{if(studioMode==="dissect")frameNeuro("Frente")});
 $("studioResetExplode").addEventListener("click",()=>selectStudioPreset("closed"));
 $("studioFocusDeep").addEventListener("click",focusStudioCenter);
