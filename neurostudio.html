@@ -629,6 +629,7 @@ $("quizShow").addEventListener("click",showNeuroQuizStructure);
 renderQuiz();
 // Neuroatlas V12 — hemisferios, contexto y vistas
 for(const b of document.querySelectorAll("#sideButtons button"))b.addEventListener("click",()=>{
+if(studioMode==="compare"){neuroHemisphere="both";renderNeuroZones();setStatus("En comparación se muestran ambos hemisferios. Cambiá a Explorar para aislar uno.");return}
 neuroHemisphere=b.dataset.side;neuroTourIndex=-1;selectNeuroZone(neuroZoneId);
 });
 $("neuroContext").addEventListener("change",e=>{
@@ -650,6 +651,29 @@ if(sliceAxis){$("depthA").value=e.target.value;updateClips()}
 });
 $("sliceClear").addEventListener("click",clearSlice);
 updateCompareUI();
+// NeuroStudio V14 — controles de los cuatro modos
+for(const b of document.querySelectorAll(".studioTabs button"))b.addEventListener("click",()=>enterStudioMode(b.dataset.studio));
+$("studioExplode").addEventListener("input",e=>{studioPreset="custom";renderStudioPresets();setStudioExplode(e.target.value)});
+$("studioExplode").addEventListener("change",()=>{if(studioMode==="dissect")frameNeuro("Frente")});
+$("studioResetExplode").addEventListener("click",()=>selectStudioPreset("closed"));
+$("studioFocusDeep").addEventListener("click",focusStudioCenter);
+for(const b of document.querySelectorAll("[data-route-side]"))b.addEventListener("click",()=>{studioRouteSide=b.dataset.routeSide;selectStudioRoute(studioRouteId)});
+$("studioRoutePlay").addEventListener("click",()=>{
+studioRoutePlaying=!studioRoutePlaying;
+$("studioRoutePlay").textContent=studioRoutePlaying?"⏸ Pausar animación":"▶ Reanudar animación";
+});
+$("studioRouteSpeed").addEventListener("input",e=>{
+studioRouteSpeed=Number(e.target.value)/100;
+$("studioSpeedValue").textContent=studioRouteSpeed.toLocaleString("es-AR",{maximumFractionDigits:2})+"×";
+});
+$("studioRouteContext").addEventListener("change",async e=>{
+studioRouteContext=e.target.checked;
+if(studioRouteMode){
+if(studioRouteContext&&!state.organs.loaded)await loadLayer("organs");
+for(const c of config)applyLayer(c.key);
+}
+});
+renderStudioPresets();renderStudioRoutes();updateStudioTabs();
 // V11: controles de corte, fichas y favoritos
 for(const p of SECTION_PRESETS)$(p.id).addEventListener("click",()=>applySection(p.id));
 $("sectionDepth").addEventListener("input",e=>{
@@ -1365,12 +1389,12 @@ for(const c of config){const s=state[c.key];const item=document.createElement("d
 for(const [key,label] of Object.entries({exterior:"Piel realista",musclesSolo:"Solo músculos",bones:"Solo huesos",muscle:"Músculos + huesos",organs:"Órganos + huesos",skin:"Piel transparente",vessels:"Circulación",all:"Todas las capas"})){const b=document.createElement("button");b.className="preset";b.dataset.preset=key;b.textContent=label;b.addEventListener("click",()=>setPreset(key));$("presets").appendChild(b)}
 
 $("front").addEventListener("click",()=>{if(!organMode)setCamera("Frente")});$("back").addEventListener("click",()=>{if(!organMode)setCamera("Espalda")});$("side").addEventListener("click",()=>{if(!organMode)setCamera("Perfil")});$("resetCamera").addEventListener("click",()=>{if(!organMode)setCamera("Frente")});
-$("resetAll").addEventListener("click",()=>{neuroHemisphere="both";neuroContext=false;$("neuroContext").checked=false;$("clipA").checked=false;$("clipB").checked=false;selectNeuroZone("brain")});
+$("resetAll").addEventListener("click",()=>{neuroHemisphere="both";neuroContext=false;$("neuroContext").checked=false;enterStudioMode("dissect")});
 $("isolate").addEventListener("click",isolatePart);$("hidePart").addEventListener("click",hidePart);$("focus").addEventListener("click",focusPart);$("restore").addEventListener("click",restoreAll);$("search").addEventListener("input",refreshResults);
 $("visualStyle").addEventListener("change",applyVisualStyle);
 $("renderQuality").addEventListener("change",applyRenderQuality);
-$("exteriorView").addEventListener("click",()=>selectNeuroZone("brain"));
-$("muscleView").addEventListener("click",()=>selectNeuroZone("vision"));
+$("exteriorView").addEventListener("click",()=>enterStudioMode("dissect"));
+$("muscleView").addEventListener("click",async()=>{await enterStudioMode("explore");if(studioMode==="explore")await selectNeuroZone("vision")});
 $("spinToggle").addEventListener("click",()=>{
 if(!controls)return;controls.autoRotate=!controls.autoRotate;controls.autoRotateSpeed=.65;
 $("spinToggle").setAttribute("aria-pressed",String(controls.autoRotate));
