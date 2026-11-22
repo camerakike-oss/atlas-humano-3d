@@ -350,7 +350,7 @@ let dissectIndex=0,dissectToken=0,explodeAmount=0,labelsActive=[],labelTick=0,qu
 let activeSection=null,sectionSequence=0;const FAVORITES_KEY="atlas-humano-v12-neuro-favoritos";let favorites=[];
 let neuroMode=true,neuroZoneId="brain",neuroHemisphere="both",neuroContext=false,neuroRequest=0,neuroTourIndex=-1;
 let compareMode=false,compareCamera=null,compareBounds={},sliceAxis=null,comparePeer=null,comparePeerOriginal=null;
-let studioMode="dissect",studioExplode=0,studioPreset="split",studioRouteId="vision",studioRouteSide="left",studioRoutePlaying=true,studioRouteSpeed=1,studioRouteContext=true,studioRouteMode=false,studioRouteRequest=0,studioRouteMeshes=[],studioRouteGroup=null,studioRouteDots=[],studioRouteCurves=[],studioRouteTime=0,studioRouteLast=0,studioCameraFlight=null,studioEngine=null,studioModeRequest=0;
+let studioMode="dissect",studioExplode=0,studioPreset="split",studioRouteId="vision",studioRouteSide="left",studioRoutePlaying=true,studioRouteSpeed=1,studioRouteContext=true,studioRouteMode=false,studioRouteRequest=0,studioRouteMeshes=[],studioRouteGroup=null,studioRouteDots=[],studioRouteCurves=[],studioRouteTime=0,studioRouteLast=0,studioCameraFlight=null,studioEngine=null,studioModeRequest=0,studioPresetRequest=0;
 const studioOriginPositions=new WeakMap(),studioRouteMaterialCache=new WeakMap();
 const neuroGhostCache=new WeakMap(),neuroTintCache=new WeakMap();
 const neckPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
@@ -653,7 +653,7 @@ $("sliceClear").addEventListener("click",clearSlice);
 updateCompareUI();
 // NeuroStudio V14 — controles de los cuatro modos
 for(const b of document.querySelectorAll(".studioTabs button"))b.addEventListener("click",()=>enterStudioMode(b.dataset.studio));
-$("studioExplode").addEventListener("input",e=>{studioPreset="custom";renderStudioPresets();setStudioExplode(e.target.value)});
+$("studioExplode").addEventListener("input",async e=>{const value=Number(e.target.value);studioPreset="custom";renderStudioPresets();if(neuroZoneId!=="brain"){const token=++studioPresetRequest;await selectNeuroZone("brain");if(token!==studioPresetRequest||studioMode!=="dissect")return}setStudioExplode(value)});
 $("studioExplode").addEventListener("change",()=>{if(studioMode==="dissect")frameNeuro("Frente")});
 $("studioResetExplode").addEventListener("click",()=>selectStudioPreset("closed"));
 $("studioFocusDeep").addEventListener("click",focusStudioCenter);
@@ -754,10 +754,10 @@ b.addEventListener("click",()=>selectStudioPreset(p.id));host.appendChild(b);
 }
 async function selectStudioPreset(id){
 const p=STUDIO_LAB_PRESETS.find(x=>x.id===id);if(!p)return;
-const token=studioModeRequest;studioPreset=id;
+const token=studioModeRequest,presetToken=++studioPresetRequest;studioPreset=id;
 renderStudioPresets();
 if(neuroZoneId!==p.zone||!state.organs.loaded)await selectNeuroZone(p.zone);
-if(token!==studioModeRequest||studioMode!=="dissect")return;
+if(token!==studioModeRequest||presetToken!==studioPresetRequest||studioMode!=="dissect")return;
 setStudioExplode(p.explode,true);
 $("modelStatus").textContent="DISECCIÓN ACTIVA";
 setStatus(p.name+": "+p.description+" El desplazamiento no representa una separación anatómica real.");
@@ -846,7 +846,7 @@ if(mesh!==selected||!selectedMaterial)mesh.material=mat;
 async function selectStudioRoute(id){
 if(homeHeight)neckPlane.constant=-homeHeight*.58;
 const route=STUDIO_ROUTES.find(x=>x.id===id);if(!route)return;
-clearStudioRoute();studioRouteId=id;
+clearStudioRoute();studioCameraFlight=null;studioRouteId=id;
 const token=studioRouteRequest;
 renderStudioRoutes();$("studioRouteSteps").replaceChildren();
 studioHUD("RUTAS EDUCATIVAS","Cargando "+route.name,"Buscando las estructuras anatómicas reales");
@@ -887,7 +887,7 @@ refreshResults();refreshMultiLabels();
 async function enterStudioMode(mode,initial=false){
 if(!["dissect","routes","compare","explore"].includes(mode))return;
 if(homeHeight)neckPlane.constant=-homeHeight*((mode==="dissect"||mode==="routes")?.58:.77);
-const token=++studioModeRequest;studioMode=mode;studioCameraFlight=null;
+const token=++studioModeRequest;++studioPresetRequest;studioMode=mode;studioCameraFlight=null;
 if(studioEngine)studioEngine.resetExplode();
 studioExplode=0;$("studioExplode").value=0;$("studioExplodePct").textContent="0%";
 clearStudioRoute();
