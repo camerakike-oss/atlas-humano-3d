@@ -671,6 +671,218 @@ organUI();
 
 
 
+
+// NeuroStudio V14 — disección, conexiones esquemáticas y cámara cinematográfica
+function studioHUD(mode,title,subtitle){
+$("studioHUDMode").textContent=mode;
+$("studioHUDTitle").textContent=title;
+$("studioHUDSubtitle").textContent=subtitle;
+}
+function updateStudioAnimation(){
+if(!clock)return;
+const dt=Math.min(.065,clock.getDelta());
+if(studioCameraFlight&&camera&&controls){
+const f=studioCameraFlight;f.elapsed+=dt;
+const t=Math.min(1,f.elapsed/f.duration),ease=t*t*(3-2*t);
+camera.position.lerpVectors(f.fromPosition,f.toPosition,ease);
+controls.target.lerpVectors(f.fromTarget,f.toTarget,ease);
+if(t>=1)studioCameraFlight=null;
+}
+if(studioEngine)studioEngine.update(dt,studioRoutePlaying&&studioMode==="routes",studioRouteSpeed);
+}
+function flyStudioCamera(center,distance,duration=1){
+if(!camera||!controls)return;
+const direction=camera.position.clone().sub(controls.target);
+if(direction.lengthSq()<.001)direction.set(0,.12,1);
+direction.normalize();
+const end=center.clone().addScaledVector(direction,Math.max(.16,distance));
+camera.up.set(0,1,0);
+studioCameraFlight={fromPosition:camera.position.clone(),toPosition:end,fromTarget:controls.target.clone(),toTarget:center.clone(),elapsed:0,duration};
+}
+function updateStudioTabs(){
+document.body.dataset.studioMode=studioMode;
+for(const b of document.querySelectorAll(".studioTabs button")){
+const active=b.dataset.studio===studioMode;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));
+}
+}
+function studioBrainMeshes(){
+if(!state.organs.loaded)return [];
+return state.organs.meshes.filter(m=>NEURO_ZONES[0].re.test(m.userData.atlasName));
+}
+function setStudioExplode(value,reframe=false){
+studioExplode=Math.max(0,Math.min(100,Number(value)||0));
+$("studioExplode").value=studioExplode;$("studioExplodePct").textContent=studioExplode+"%";
+if(studioEngine&&state.organs.loaded)studioEngine.explode(studioBrainMeshes(),studioExplode/100);
+if(reframe&&camera&&state.organs.loaded)frameNeuro("Frente");
+if(studioMode==="dissect")studioHUD("DISECCIÓN CEREBRAL",studioExplode?"Separación al "+studioExplode+"%":"Anatomía en posición original",studioExplode?"Desplazamiento didáctico · Girá y acercá para explorar":"Piezas anatómicas en su posición original");
+if(studioMode==="dissect")refreshMultiLabels();
+}
+function renderStudioPresets(){
+const host=$("studioPresets");host.replaceChildren();
+for(const p of STUDIO_LAB_PRESETS){
+const b=document.createElement("button");b.type="button";b.className="studioPreset"+(studioPreset===p.id?" active":"");
+const ico=document.createElement("span");ico.textContent=p.id==="closed"?"🧠":p.id==="split"?"↔":p.id==="deep"?"🧩":p.id==="callosum"?"◎":"🎯";
+const text=document.createElement("div"),title=document.createElement("strong"),desc=document.createElement("small");
+title.textContent=p.name;desc.textContent=p.description;text.append(title,desc);b.append(ico,text);
+b.addEventListener("click",()=>selectStudioPreset(p.id));host.appendChild(b);
+}
+}
+async function selectStudioPreset(id){
+const p=STUDIO_LAB_PRESETS.find(x=>x.id===id);if(!p)return;
+const token=studioModeRequest;studioPreset=id;
+renderStudioPresets();
+if(neuroZoneId!==p.zone||!state.organs.loaded)await selectNeuroZone(p.zone);
+if(token!==studioModeRequest||studioMode!=="dissect")return;
+setStudioExplode(p.explode,true);
+$("modelStatus").textContent="DISECCIÓN ACTIVA";
+setStatus(p.name+": "+p.description+" El desplazamiento no representa una separación anatómica real.");
+}
+function focusStudioCenter(){
+const mesh=state.organs.meshes.find(m=>/^corpus callosum$/i.test(m.userData.atlasName));
+if(!mesh){setStatus("Cargá primero la capa de órganos.");return}
+if(!mesh.visible){setStatus("Elegí «Cerebro completo» o «Revelar estructuras centrales» para ver el cuerpo calloso.");return}
+choosePart(mesh);
+const box=new THREE.Box3().setFromObject(mesh);
+if(!box.isEmpty()){const size=box.getSize(new THREE.Vector3());flyStudioCamera(box.getCenter(new THREE.Vector3()),Math.max(.16,size.length()*3.4),1.15)}
+setStatus("Cuerpo calloso seleccionado. Conecta regiones de ambos hemisferios.");
+}
+function clearStudioRoute(){
+++studioRouteRequest;studioRouteMode=false;studioRouteMeshes=[];
+if(studioEngine)studioEngine.clearRoute();
+}
+function studioRoute(){return STUDIO_ROUTES.find(r=>r.id===studioRouteId)||STUDIO_ROUTES[0]}
+function renderStudioRoutes(){
+const host=$("studioRouteCards");host.replaceChildren();
+for(const r of STUDIO_ROUTES){
+const b=document.createElement("button");b.type="button";b.className="studioRouteCard"+(r.id===studioRouteId?" active":"");
+const ico=document.createElement("span");ico.textContent=r.icon;
+const text=document.createElement("div"),title=document.createElement("strong"),desc=document.createElement("small");
+title.textContent=r.name;desc.textContent=r.lead;text.append(title,desc);b.append(ico,text);
+b.addEventListener("click",()=>selectStudioRoute(r.id));host.appendChild(b);
+}
+const route=studioRoute();
+$("studioRouteTitle").textContent=route.name;
+$("studioRouteDescription").textContent=route.description;
+$("studioRouteDisclaimer").textContent="Importante: "+route.note;
+for(const b of document.querySelectorAll("[data-route-side]")){
+const active=b.dataset.routeSide===studioRouteSide;
+b.classList.toggle("active",active);b.disabled=!route.side;b.setAttribute("aria-pressed",String(active));
+}
+}
+function renderStudioRouteSteps(){
+const host=$("studioRouteSteps");host.replaceChildren();
+for(const [i,x] of studioRouteMeshes.entries()){
+const b=document.createElement("button");b.type="button";b.className="studioRouteStep";
+const n=document.createElement("b");n.textContent=i+1;
+const text=document.createElement("span");text.textContent=x.node.label;
+b.append(n,text);b.title=x.node.desc;
+b.addEventListener("click",()=>focusStudioRouteStep(i));
+host.appendChild(b);
+}
+}
+function focusStudioRouteStep(index){
+const x=studioRouteMeshes[index];if(!x)return;
+const mesh=x.mesh;
+choosePart(mesh);
+const box=new THREE.Box3().setFromObject(mesh);
+if(!box.isEmpty()){
+const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
+flyStudioCamera(center,Math.max(.17,size.length()*3.1),1);
+}
+for(const [i,b] of [...$("studioRouteSteps").children].entries())b.classList.toggle("active",i===index);
+studioHUD("RUTA ESQUEMÁTICA · PASO "+(index+1)+"/"+studioRouteMeshes.length,x.node.label,x.node.desc);
+setStatus(x.node.desc+" La línea animada es una orientación didáctica, no el trayecto físico de las fibras.");
+}
+function applyStudioRouteLayer(key){
+const layer=state[key];if(!layer.group)return;
+const route=studioRoute();
+const showContext=studioRouteContext&&key==="organs";
+layer.group.visible=route.nodes.some(n=>n.layer===key)||showContext;
+for(const mesh of layer.meshes){
+const active=studioRouteMeshes.some(x=>x.mesh===mesh);
+const ghost=showContext&&!active&&NEURO_ZONES[0].re.test(mesh.userData.atlasName);
+mesh.visible=(active||ghost)&&!hiddenParts.has(mesh.uuid)&&(!isolateSnapshot||mesh===selected);
+const base=mesh.userData.baseMaterial;
+let mat=base;
+if(ghost){
+mat=neuroGhostCache.get(base);
+if(!mat){mat=base.clone();neuroGhostCache.set(base,mat)}
+}else if(active){
+let variants=studioRouteMaterialCache.get(base);
+if(!variants){variants=new Map();studioRouteMaterialCache.set(base,variants)}
+mat=variants.get(route.id);
+if(!mat){mat=base.clone();mat.color.set(route.accent);mat.emissive=new THREE.Color(route.accent);mat.emissiveIntensity=.12;variants.set(route.id,mat)}
+}
+const alpha=ghost?.105:1;
+mat.opacity=alpha;mat.transparent=alpha<.99;mat.depthWrite=alpha>.62;mesh.renderOrder=alpha<.99?2:0;
+if(mesh!==selected||!selectedMaterial)mesh.material=mat;
+}
+}
+async function selectStudioRoute(id){
+const route=STUDIO_ROUTES.find(x=>x.id===id);if(!route)return;
+clearStudioRoute();studioRouteId=id;
+const token=studioRouteRequest;
+renderStudioRoutes();$("studioRouteSteps").replaceChildren();
+studioHUD("RUTAS EDUCATIVAS","Cargando "+route.name,"Buscando las estructuras anatómicas reales");
+$("modelStatus").textContent="CARGANDO RUTA";
+if(compareMode){compareMode=false;clearComparePeer();updateCompareUI()}
+if(studioEngine)studioEngine.resetExplode();studioExplode=0;
+if(isolateSnapshot)restoreIsolation();hiddenParts.clear();clearSelection();
+const needed=[...new Set([...route.nodes.map(n=>n.layer),...(studioRouteContext?["organs"]:[])])];
+await Promise.all(needed.map(k=>loadLayer(k)));
+if(token!==studioRouteRequest||studioMode!=="routes")return;
+const nodes=[];
+for(const node of route.nodes){
+const mesh=state[node.layer].meshes.find(m=>routeNodeCandidates(route,m.userData.atlasName,node.layer,studioRouteSide).includes(node));
+if(!mesh){$("modelStatus").textContent="RUTA INCOMPLETA";setStatus("No se encontró «"+node.label+"» en el modelo descargado. No se dibujará una conexión inventada.");studioHUD("RUTA NO DISPONIBLE",node.label,"Falta una estructura anatómica necesaria");return}
+nodes.push({mesh,node});
+}
+studioRouteMeshes=nodes;studioRouteMode=true;
+for(const c of config){state[c.key].visible=needed.includes(c.key);state[c.key].opacity=1;applyLayer(c.key)}
+updateLayerUI();
+const success=studioEngine?.createRoute(nodes,route.accent);
+if(!success){studioRouteMode=false;setStatus("No se pudo dibujar la ruta con las geometrías cargadas.");return}
+renderStudioRouteSteps();
+const box=new THREE.Box3();for(const x of nodes)box.expandByObject(x.mesh);
+if(!box.isEmpty()){
+const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
+flyStudioCamera(center,Math.max(.32,size.length()*1.9),1.25);
+}
+$("selectedLayer").textContent="RUTA ESQUEMÁTICA";
+$("selectedName").textContent=route.name;$("selectedDesc").textContent=route.description;
+$("infoTitle").textContent="Estructuras reales, conexiones ilustrativas";
+$("infoText").textContent=route.note;
+$("countLabel").textContent=nodes.length+" PUNTOS ANATÓMICOS";
+$("modelStatus").textContent="RUTA ANIMADA";
+studioHUD("RUTA EDUCATIVA ANIMADA",route.name,nodes.length+" estructuras localizadas · "+(route.side?(studioRouteSide==="left"?"Izquierda":"Derecha"):"Ambos hemisferios"));
+setStatus("Ruta cargada: "+route.name+". "+route.note);
+refreshResults();refreshMultiLabels();
+}
+async function enterStudioMode(mode,initial=false){
+if(!["dissect","routes","compare","explore"].includes(mode))return;
+const token=++studioModeRequest;studioMode=mode;studioCameraFlight=null;
+if(studioEngine)studioEngine.resetExplode();
+studioExplode=0;$("studioExplode").value=0;$("studioExplodePct").textContent="0%";
+clearStudioRoute();
+if(compareMode){compareMode=false;clearComparePeer();updateCompareUI()}
+$("clipA").checked=false;$("clipB").checked=false;updateClips();
+updateStudioTabs();refreshMultiLabels();
+if(mode==="routes"){
+studioHUD("RUTAS ANIMADAS","Preparando conexiones","Los puntos se anclan a estructuras del modelo 3D");
+await selectStudioRoute(studioRouteId);return;
+}
+await selectNeuroZone("brain");
+if(token!==studioModeRequest)return;
+if(mode==="dissect"){
+await selectStudioPreset(initial?"split":"split");
+}else if(mode==="compare"){
+studioHUD("COMPARACIÓN","Dos hemisferios","Girá para estudiar ambas superficies");
+await toggleComparison(true);
+}else{
+studioHUD("EXPLORACIÓN","Encéfalo completo","Elegí una de las 16 regiones para estudiarla");
+}
+}
+
 // V13 — Comparador bilateral sincronizado y cortes cerebrales
 function compareVisibleMeshes(){
 return allMeshes.filter(m=>m.visible&&state[m.userData.atlasLayer]?.group?.visible)
