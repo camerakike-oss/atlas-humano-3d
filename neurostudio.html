@@ -595,7 +595,7 @@ if(isolateSnapshot)restoreIsolation();hiddenParts.clear();clearSelection();
 if(bodySnapshot){for(const x of bodySnapshot){state[x.key].visible=x.visible;state[x.key].opacity=x.opacity;$("range-"+x.key).value=Math.round(x.opacity*100);$("opacity-"+x.key).textContent=Math.round(x.opacity*100)+"%"}}
 bodySnapshot=null;for(const c of config)applyLayer(c.key);
 organUI();updateLayerUI();refreshResults();updateClips();if(camera)setCamera("Frente");setStatus("Volviste al cuerpo completo.")}
-function currentClipBounds(){if(neuroMode){const box=new THREE.Box3();for(const m of neuroActiveMeshes())box.expandByObject(m);return box}if(organMode&&groupMeshes().length)return groupBox();const group=state.skeleton.group||state.organs.group;return group?new THREE.Box3().setFromObject(group):new THREE.Box3()}
+function currentClipBounds(){if(studioRouteMode){const box=new THREE.Box3();for(const x of studioRouteMeshes)box.expandByObject(x.mesh);return box}if(neuroMode){const box=new THREE.Box3();for(const m of neuroActiveMeshes())box.expandByObject(m);return box}if(organMode&&groupMeshes().length)return groupBox();const group=state.skeleton.group||state.organs.group;return group?new THREE.Box3().setFromObject(group):new THREE.Box3()}
 function updateClips(){
 if(!renderer)return;const box=currentClipBounds();if(box.isEmpty()){renderer.clippingPlanes=[neckPlane];return}
 const planes=[];
@@ -641,7 +641,7 @@ $("neuroTop").addEventListener("click",()=>quickNeuroView("Superior"));
 $("neuroMid").addEventListener("click",neuroSagittalCut);
 $("neuroReset").addEventListener("click",()=>quickNeuroView("Frente"));
 // V13 — controles de comparación y cortes guiados
-$("compareToggle").addEventListener("click",()=>toggleComparison());
+$("compareToggle").addEventListener("click",()=>{if(studioMode!=="compare")enterStudioMode("compare");else toggleComparison()});
 for(const id of ["sliceSagittal","sliceCoronal","sliceAxial"]){
 $(id).addEventListener("click",()=>setSlice($(id).dataset.slice))
 }
@@ -886,7 +886,7 @@ refreshResults();refreshMultiLabels();
 }
 async function enterStudioMode(mode,initial=false){
 if(!["dissect","routes","compare","explore"].includes(mode))return;
-if(homeHeight)neckPlane.constant=-homeHeight*(mode==="dissect"||mode==="routes"?.58:.77);
+if(homeHeight)neckPlane.constant=-homeHeight*((mode==="dissect"||mode==="routes")?.58:.77);
 const token=++studioModeRequest;studioMode=mode;studioCameraFlight=null;
 if(studioEngine)studioEngine.resetExplode();
 studioExplode=0;$("studioExplode").value=0;$("studioExplodePct").textContent="0%";
