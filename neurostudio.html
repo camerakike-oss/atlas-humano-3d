@@ -332,6 +332,7 @@ import {NEURO_QUIZ as HEAD_QUIZ} from "./atlas-v12-neuro-data.js";
 import {detailFor,SECTION_PRESETS} from "./atlas-v11-head-details.js";
 import {NEURO_ZONES,NEURO_TOUR,neuroMatches,neuroSide,neuroLabel} from "./atlas-v12-neuro-data.js";
 import {STUDIO_ROUTES,STUDIO_LAB_PRESETS,routeMatches,routeNodeCandidates} from "./atlas-v14-studio-data.js";
+import {NeuroStudioEngine} from "./atlas-v14-studio-engine.js";
 const $=id=>document.getElementById(id);
 const config=[
 {key:"skin",label:"Piel",color:"#d4a891",count:256},
@@ -349,7 +350,7 @@ let dissectIndex=0,dissectToken=0,explodeAmount=0,labelsActive=[],labelTick=0,qu
 let activeSection=null,sectionSequence=0;const FAVORITES_KEY="atlas-humano-v12-neuro-favoritos";let favorites=[];
 let neuroMode=true,neuroZoneId="brain",neuroHemisphere="both",neuroContext=false,neuroRequest=0,neuroTourIndex=-1;
 let compareMode=false,compareCamera=null,compareBounds={},sliceAxis=null,comparePeer=null,comparePeerOriginal=null;
-let studioMode="dissect",studioExplode=0,studioPreset="split",studioRouteId="vision",studioRouteSide="left",studioRoutePlaying=true,studioRouteSpeed=1,studioRouteContext=true,studioRouteMode=false,studioRouteRequest=0,studioRouteMeshes=[],studioRouteGroup=null,studioRouteDots=[],studioRouteCurves=[],studioRouteTime=0,studioRouteLast=0,studioCameraFlight=null;
+let studioMode="dissect",studioExplode=0,studioPreset="split",studioRouteId="vision",studioRouteSide="left",studioRoutePlaying=true,studioRouteSpeed=1,studioRouteContext=true,studioRouteMode=false,studioRouteRequest=0,studioRouteMeshes=[],studioRouteGroup=null,studioRouteDots=[],studioRouteCurves=[],studioRouteTime=0,studioRouteLast=0,studioCameraFlight=null,studioEngine=null,studioModeRequest=0;
 const studioOriginPositions=new WeakMap(),studioRouteMaterialCache=new WeakMap();
 const neuroGhostCache=new WeakMap(),neuroTintCache=new WeakMap();
 const neckPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
@@ -442,8 +443,8 @@ const fill=new THREE.DirectionalLight(0xb9d7e7,1.25);fill.position.set(-4.2,2.1,
 const rim=new THREE.DirectionalLight(0x9adbe3,1.85);rim.position.set(-2.8,3.6,-4.2);scene.add(rim);
 const bounce=new THREE.DirectionalLight(0xffd3bd,.6);bounce.position.set(2,-1,-2);scene.add(bounce);
 camera=new THREE.PerspectiveCamera(34,1,.01,70);camera.position.set(0,1.1,3.4);compareCamera=new THREE.PerspectiveCamera(34,1,.01,70);
-controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.075;controls.minDistance=.16;controls.maxDistance=12;controls.target.set(0,.9,0);
-root=new THREE.Group();scene.add(root);raycaster=new THREE.Raycaster();clock=new THREE.Clock();
+controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.075;controls.minDistance=.16;controls.maxDistance=12;controls.target.set(0,.9,0);controls.addEventListener("start",()=>{studioCameraFlight=null});
+root=new THREE.Group();scene.add(root);studioEngine=new NeuroStudioEngine(THREE,scene,root);raycaster=new THREE.Raycaster();clock=new THREE.Clock();
 const shadowCanvas=document.createElement("canvas");shadowCanvas.width=128;shadowCanvas.height=128;
 const ctx=shadowCanvas.getContext("2d");const grad=ctx.createRadialGradient(64,64,3,64,64,64);
 grad.addColorStop(0,"rgba(0,0,0,0.48)");grad.addColorStop(.5,"rgba(0,0,0,0.21)");grad.addColorStop(1,"rgba(0,0,0,0)");
@@ -455,7 +456,7 @@ ring.rotation.x=-Math.PI/2;ring.position.y=-.03;scene.add(ring);
 loader=new GLTFLoader();const draco=new DRACOLoader();draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/libs/draco/");loader.setDRACOLoader(draco);
 function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(wrap);resize();
-function frame(){requestAnimationFrame(frame);controls.update();if(compareMode)renderComparison();else renderer.render(scene,camera);updatePin();if((++labelTick%3)===0)updateMultiLabels()}frame();
+function frame(){requestAnimationFrame(frame);updateStudioAnimation();controls.update();if(compareMode)renderComparison();else renderer.render(scene,camera);updatePin();if((++labelTick%3)===0)updateMultiLabels()}frame();
 canvas.addEventListener("pointerdown",e=>{canvas.dataset.downX=e.clientX;canvas.dataset.downY=e.clientY});
 canvas.addEventListener("pointerup",e=>{if(Math.hypot(e.clientX-Number(canvas.dataset.downX||e.clientX),e.clientY-Number(canvas.dataset.downY||e.clientY))>6)return;const r=canvas.getBoundingClientRect();let hits;
 if(compareMode){
@@ -496,6 +497,7 @@ $("viewLabel").textContent=(v.title+" · "+view).toUpperCase();
 function setCamera(view){if(neuroMode)frameNeuro(view);else frameHead(view)}
 function updateLayerUI(){for(const c of config){const s=state[c.key];const b=$("toggle-"+c.key),t=$("state-"+c.key);if(b){b.textContent=s.loading?"Cargando":s.failed?"Reintentar":s.visible?"Visible":"Oculta";b.classList.toggle("on",s.visible);b.setAttribute("aria-pressed",String(s.visible))}if(t)t.textContent=s.loading?"Descargando...":s.failed?"Error":s.loaded?s.meshes.length+" piezas":"Pendiente"}}
 function applyLayer(key){
+if(studioRouteMode){applyStudioRouteLayer(key);return}
 if(neuroMode){
 const layer=state[key];if(!layer.group)return;
 const zone=neuroZone(),allowContext=neuroContext&&key==="organs";
@@ -602,12 +604,12 @@ const axis=$("axis"+suf).value,normal=new THREE.Vector3(axis==="x"?1:0,axis==="y
 const min=box.min[axis],max=box.max[axis];clipPlanes[i].normal.copy(normal);clipPlanes[i].constant=-(min+(max-min)*Number($("depth"+suf).value)/100);planes.push(clipPlanes[i])}
 renderer.clippingPlanes=[neckPlane,...planes];
 }
-function updatePin(){const pin=$("pin3d");if(compareMode){pin.hidden=true;return}if(!selected||!selected.visible||!$("pinEnabled").checked||!camera||!renderer){pin.hidden=true;return}
+function updatePin(){const pin=$("pin3d");if(compareMode||studioMode==="routes"){pin.hidden=true;return}if(!selected||!selected.visible||!$("pinEnabled").checked||!camera||!renderer){pin.hidden=true;return}
 const box=new THREE.Box3().setFromObject(selected);if(box.isEmpty()){pin.hidden=true;return}
 const p=box.getCenter(new THREE.Vector3()).project(camera);if(p.z<-1||p.z>1||Math.abs(p.x)>1.1||Math.abs(p.y)>1.1){pin.hidden=true;return}
 pin.hidden=false;pin.textContent=selected.userData.atlasLabel;pin.style.left=((p.x+1)*50)+"%";pin.style.top=((1-p.y)*50)+"%";
 }
-function saveImage(){if(!renderer)return;try{if(compareMode)renderComparison();else renderer.render(scene,camera);const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="neuroatlas-v13-"+neuroZoneId+"-"+(compareMode?"comparacion":neuroHemisphere)+".png";document.body.appendChild(a);a.click();a.remove();setStatus("Imagen PNG generada desde la vista actual.")}catch(e){setStatus("El navegador no permitió guardar la captura: "+e.message)}}
+function saveImage(){if(!renderer)return;try{if(compareMode)renderComparison();else renderer.render(scene,camera);const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="neurostudio-v14-"+studioMode+"-"+(studioMode==="routes"?studioRouteId:neuroZoneId)+".png";document.body.appendChild(a);a.click();a.remove();setStatus("Imagen PNG generada desde la vista actual.")}catch(e){setStatus("El navegador no permitió guardar la captura: "+e.message)}}
 async function runTour(){if(tourIndex<0)return;const expected=tourIndex;const step=tourStops[tourIndex];$("tourCount").textContent="PARADA "+(tourIndex+1)+" / "+tourStops.length;$("tourText").textContent=step.title+" — "+step.text;$("tourNext").textContent=tourIndex===tourStops.length-1?"Repetir recorrido ↺":"Siguiente →";await enterOrgan(step.group);if(tourIndex!==expected||organGroup?.id!==step.group)return;const match=groupMeshes().find(m=>step.re.test(m.userData.atlasName));if(match){choosePart(match);focusPart()} }
 for(const g of organGroups){const b=document.createElement("button");b.type="button";b.className="organBtn";b.dataset.group=g.id;b.textContent=g.label;b.addEventListener("click",()=>{tourIndex=-1;enterOrgan(g.id)});$("organGrid").appendChild(b)}
 $("returnBody").addEventListener("click",()=>{tourIndex=-1;leaveOrgan()});
@@ -1045,7 +1047,7 @@ nerves:[/trigeminal nerve/i,/facial nerve/i,/optic nerve/i,/vagus nerve/i],
 vessels:[/internal carotid artery/i,/vertebral artery/i,/internal jugular vein/i,/facial artery/i],
 jaw:[/mandible/i,/maxilla/i,/masseter/i,/temporalis muscle/i]
 };
-function refreshMultiLabels(){if(neuroMode){refreshNeuroLabels();return}
+function refreshMultiLabels(){if(studioMode==="routes"){$("multiLabels").replaceChildren();labelsActive=[];return}if(neuroMode){refreshNeuroLabels();return}
 const host=$("multiLabels");host.replaceChildren();labelsActive=[];
 if(!$("multiLabelsEnabled").checked)return;
 const patterns=LABEL_RULES[headView]||LABEL_RULES.full;
@@ -1167,7 +1169,7 @@ if(initialize()){
 loadLayer("skeleton").then(async()=>{
 if(!allMeshes.length){setStatus("No se pudo preparar la escena. Probá actualizar o abrir la V11.");return}
 $("loading").hidden=true;
-if(neuroRequest===0)await selectNeuroZone("brain");
+if(studioModeRequest===0)await enterStudioMode("dissect",true);
 });
 }
 </script>
